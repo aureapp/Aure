@@ -27,6 +27,7 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .avatar img,.mini img{width:100%;height:100%;object-fit:cover;display:block}
 .mini{display:inline-grid;place-items:center;overflow:hidden;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#e9d3a6,#c9a96e 55%,#a8746a);color:#fff;font:14px Georgia,serif;vertical-align:middle;margin-right:8px}
 .mini.sm{width:20px;height:20px;font-size:11px;margin-right:6px}
+.dot{color:#9a8b84}.dot.on{color:#3fb97a}
 .cnt{margin-left:auto;font-size:12px;color:var(--mut);white-space:nowrap;padding-left:8px}
 .c{text-align:center}.small{font-size:12px;color:var(--mut)}
 .room{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-top:10px;padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
@@ -133,14 +134,22 @@ $("#ph").onclick=function(){$("#fi").click()};
 $("#fi").onchange=async function(){var f=this.files[0];if(!f)return;say("Foto uploaden…",true);
 try{var url=await uploadAvatar(f,p.id);var u=await sb.from("profiles").update({avatar_url:url}).eq("id",p.id).select().single();
 if(u.data){p=u.data;$("#av").innerHTML=avh(p);say("✓ Foto opgeslagen",true)}else say("Opslaan lukt niet.")}catch(e){say("Foto uploaden lukt niet.")}};
-$("#lo").onclick=async function(){if(appChan){sb.removeChannel(appChan);appChan=null}await sb.auth.signOut();mode="login";auth()}}
+$("#lo").onclick=async function(){if(appChan){sb.removeChannel(appChan);appChan=null;appSub=false}await sb.auth.signOut();mode="login";auth()}}
 
 var PLANS=["bronze","gold","diamond"],chan=null,pchan=null,homeChans=[],appChan=null,appN=0,myYear=null;
-function showOnline(){var e=document.getElementById("ao");if(e)e.textContent=appN?"● "+appN+(appN===1?" lid online":" leden online"):""}
+function dot(n){return '<span class="dot'+(n?' on':'')+'">●</span> '}
+function showOnline(){var e=document.getElementById("ao");if(e)e.innerHTML=dot(appN)+appN+(appN===1?" lid online":" leden online")}
+var curRoom=null,appSub=false;
+function setRoom(s){curRoom=s;if(appChan&&appSub)appChan.track({room:s})}
+function counts(){var st=appChan?appChan.presenceState():{},m={},n=0;
+Object.keys(st).forEach(function(k){n++;var ms=st[k],r=ms.length?ms[ms.length-1].room:null;if(r)m[r]=(m[r]||0)+1});appN=n;return m}
+function paint(){var m=counts();showOnline();
+document.querySelectorAll(".cnt").forEach(function(e){var n=m[e.id.slice(2)]||0;e.innerHTML=dot(n)+n+" online";e.style.fontWeight=n?"700":""});
+var pc=document.getElementById("pc");if(pc&&curRoom)pc.innerHTML=dot(m[curRoom]||0)+(m[curRoom]||0)+" online"}
 function startPresence(p){if(appChan)return;
 appChan=sb.channel("presence-app",{config:{presence:{key:p.id}}});
-appChan.on("presence",{event:"sync"},function(){appN=Object.keys(appChan.presenceState()).length;showOnline()}).subscribe(async function(st){if(st==="SUBSCRIBED")await appChan.track({t:Date.now()})})}
-function leave(){if(chan){sb.removeChannel(chan);chan=null}if(pchan){sb.removeChannel(pchan);pchan=null}homeChans.forEach(function(c){sb.removeChannel(c)});homeChans=[]}
+appChan.on("presence",{event:"sync"},paint).subscribe(async function(st){if(st==="SUBSCRIBED"){appSub=true;await appChan.track({room:curRoom})}})}
+function leave(){if(chan){sb.removeChannel(chan);chan=null}}
 function master(p){return p.verification==="verified"||p.plan==="diamond"}
 function planOk(r,p){
 if(master(p)||r.access==="free")return true;
@@ -158,18 +167,17 @@ if(planOk(r,p))return "Gesloten, "+tm+".";
 var b=r.access==="vip"?"Alleen voor verified leden en Diamond":(r.access==="age30"?"Voor leden van 30 jaar en ouder":"Vanaf "+r.access);
 return b+(tm?", "+tm:"")+"."}
 async function home(p){
-leave();startPresence(p);
+leave();startPresence(p);setRoom(null);
 var v=p.verification==="verified";
 app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><div id="rl" class="small c">Laden…</div>';
-$("#pf").onclick=function(){profile(p)};showOnline();
+$("#pf").onclick=function(){profile(p)};paint();
 var g=await sb.from("rooms").select("*").order("sort");
 if(g.error||!g.data){$("#rl").textContent="Chatrooms laden lukt niet.";return}
 var h="";g.data.forEach(function(r,i){var ok=can(r,p);
-h+='<button class="room'+(r.access==="vip"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'"><span class="ic">'+(ok?(r.access==="vip"?"✦":"💬"):"🔒")+'</span><span><b>'+esc(r.name)+'</b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">0 online</span></button>'});
+h+='<button class="room'+(r.access==="vip"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'"><span class="ic">'+(ok?(r.access==="vip"?"✦":"💬"):"🔒")+'</span><span><b>'+esc(r.name)+'</b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">'+dot(0)+'0 online</span></button>'});
 $("#rl").className="";$("#rl").innerHTML=h;
 document.querySelectorAll(".room").forEach(function(b){b.onclick=function(){room(g.data[+b.dataset.i],p)}});
-g.data.forEach(function(r){var c=sb.channel("presence-"+r.slug,{config:{presence:{key:"v"+Math.random().toString(36).slice(2)}}});
-c.on("presence",{event:"sync"},function(){var n=Object.keys(c.presenceState()).length,e=document.getElementById("c-"+r.slug);if(e){e.textContent=n?"● "+n+" online":"0 online";e.style.color=n?"var(--acc)":"";e.style.fontWeight=n?"700":""}}).subscribe();homeChans.push(c)})}
+paint()}
 
 async function room(r,p){
 leave();
@@ -189,8 +197,7 @@ if(g.data){g.data.reverse().forEach(add)}
 if(!box.children.length)box.innerHTML='<div class="small c" style="margin:auto">Nog geen berichten. Zeg als eerste hallo!</div>';
 chan=sb.channel("room-"+r.slug).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"room=eq."+r.slug},async function(e){
 var q=await sb.from("messages").select(SEL).eq("id",e.new.id).single();if(q.data){var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(q.data)}}).subscribe();
-pchan=sb.channel("presence-"+r.slug,{config:{presence:{key:p.id}}});
-pchan.on("presence",{event:"sync"},function(){var e=$("#pc");if(e)e.textContent="● "+Object.keys(pchan.presenceState()).length+" online"}).subscribe(async function(st){if(st==="SUBSCRIBED")await pchan.track({t:Date.now()})});
+setRoom(r.slug);paint();
 async function send(){var t=$("#tx").value.trim();if(!t)return;$("#sd").disabled=true;
 var i=await sb.from("messages").insert({room:r.slug,body:t}).select(SEL).single();
 $("#sd").disabled=false;
