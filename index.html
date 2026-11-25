@@ -82,8 +82,9 @@ var reg=mode==="register";
 app.innerHTML=head()+'<div class="card"><div class="tabs"><button id="t1" class="'+(reg?'':'on')+'">Inloggen</button><button id="t2" class="'+(reg?'on':'')+'">Account maken</button></div>'
 +(reg?'<label>Gebruikersnaam</label><input type="text" id="un" placeholder="bijv. sanne.s" maxlength="20" autocapitalize="none" autocomplete="off"><label>Geboortejaar</label><input type="text" id="by" inputmode="numeric" maxlength="4" placeholder="bijv. 1995" autocomplete="off"><div class="small" style="margin-top:4px">Wordt nergens getoond. Alleen om te bepalen welke kamers voor jou open zijn.</div>':'')
 +'<label>E-mail</label><input type="email" id="em" autocapitalize="none" autocomplete="email"><label>Wachtwoord</label><input type="password" id="pw" autocomplete="'+(reg?'new-password':'current-password')+'">'
-+(reg?'<div class="chk"><input type="checkbox" id="age"><span>Ik ben 18 jaar of ouder. (Testversie: de echte leeftijdscheck volgt.)</span></div>':'')
++(reg?'<div class="chk"><input type="checkbox" id="age"><span>Ik ben 18 jaar of ouder. (Testversie: de echte leeftijdscheck volgt.)</span></div><div class="chk"><input type="checkbox" id="tm"><span>Ik ga akkoord met de <a href="#" id="l1">voorwaarden</a> en de <a href="#" id="l2">privacyverklaring</a>.</span></div>':'')
 +'<button class="btn" id="go">'+(reg?'Account maken':'Inloggen')+'</button><div id="msg"></div></div>';
+if(reg){$("#l1").onclick=function(e){e.preventDefault();legal("terms")};$("#l2").onclick=function(e){e.preventDefault();legal("privacy")}}
 $("#t1").onclick=function(){mode="login";auth()};$("#t2").onclick=function(){mode="register";auth()};
 if(reg){$("#un").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20)}}
 $("#go").onclick=async function(){
@@ -97,7 +98,8 @@ if(!/^[a-z0-9._]{3,20}$/.test(un)){say("Gebruikersnaam: 3 tot 20 tekens (letters
 var by=$("#by").value.trim();
 if(!/^(19|20)\d\d$/.test(by)||+by>new Date().getFullYear()-18){say("Alleen voor 18+. Vul een geldig geboortejaar in.");this.disabled=false;return}
 if(!$("#age").checked){say("Alleen voor 18+.");this.disabled=false;return}
-var r=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,birth_year:+by}}});
+if(!$("#tm").checked){say("Ga akkoord met de voorwaarden en de privacyverklaring om door te gaan.");this.disabled=false;return}
+var r=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,birth_year:+by,accepted_terms:new Date().toISOString()}}});
 if(r.error){say(r.error.message);this.disabled=false;return}
 if(r.data.session){await afterLogin(r.data.session.user)}
 else{say("Bijna klaar! Bevestig je e-mail via de link in je mailbox en log daarna in.",true);this.disabled=false}
@@ -142,6 +144,51 @@ if(!g.data.length){box.innerHTML='<div class="small c">Je hebt niemand geblokkee
 box.innerHTML=g.data.map(function(r){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0"><b>@'+esc((r.profiles||{}).username||"?")+'</b><button class="back" data-id="'+esc(r.blocked)+'">Deblokkeren</button></div>'}).join("");
 box.querySelectorAll("[data-id]").forEach(function(b){b.onclick=async function(){await sb.from("blocks").delete().eq("blocked",b.dataset.id);blocked(p)}})}
 
+var LEGAL_MAIL="";
+var LEGAL={
+terms:["Gebruiksvoorwaarden",[
+["Wie mag meedoen","Auré is alleen voor mensen van 18 jaar en ouder. Je geeft bij het aanmaken een juist geboortejaar op."],
+["Respect","Wees respectvol. Geen pesten, intimidatie, haat, bedreigingen of discriminatie. Geen spam of reclame zonder toestemming."],
+["Verboden inhoud","Geen illegale inhoud, geen seksuele inhoud met of over minderjarigen, geen geweld of bedreigingen, en geen persoonlijke gegevens van anderen."],
+["Je berichten","Wat je in een chatroom schrijft, kunnen alle leden van die kamer lezen. Deel dus niets wat je privé wilt houden. Jij blijft verantwoordelijk voor wat je schrijft."],
+["Melden en blokkeren","Je kunt berichten melden en leden blokkeren. Wij bekijken meldingen en kunnen berichten verwijderen of accounts beperken of sluiten."],
+["Vinkje en lidmaatschap","Het vinkje is alleen voor bekende personen en wordt na controle toegekend. Een vinkje of lidmaatschap geeft geen recht op bijzondere behandeling bij overtredingen."],
+["Veiligheid en eigen verantwoordelijkheid","Deel geen telefoonnummers, adressen of privéfoto's met mensen die je hier ontmoet. Wij raden dat af. Doe je het toch, dan is dat je eigen keuze en risico. Spreek je buiten Auré af met iemand die je hier hebt leren kennen, dan is dat op eigen risico. Spreek af op een openbare plek en laat iemand weten waar je bent. Wij controleren niet wie iemand echt is en kunnen daar niet voor instaan."],
+["Foto's en seksuele inhoud","Naaktfoto's en seksueel expliciete inhoud zijn niet toegestaan en worden verwijderd, en het account kan worden gesloten. Wat je in de app plaatst, kunnen andere leden zien en opslaan. Wij kunnen niet voorkomen dat anderen er iets mee doen. Deel dus alleen wat je goed vindt. Foto's van anderen mag je nooit zonder toestemming plaatsen of doorsturen."],
+["Meld misbruik","Zie je iets wat niet kan? Tik op de drie puntjes naast een bericht om te melden of te blokkeren. Wij kijken naar meldingen en halen overtredende inhoud weg."],
+["Onze verantwoordelijkheid","Auré is een vrijblijvende app voor mensen van 18 jaar en ouder. Voor wat andere leden doen of zeggen zijn wij niet aansprakelijk. Dit geldt niet als de wet anders bepaalt, bijvoorbeeld bij opzet of grove nalatigheid van onze kant."],
+["Wijzigingen","Auré is in ontwikkeling. Functies, kamers en regels kunnen veranderen. Je kunt je account altijd zelf verwijderen via Instellingen."]]],
+privacy:["Privacyverklaring",[
+["Welke gegevens we bewaren","Gebruikersnaam, e-mailadres, geboortejaar, profielfoto, stad en beroep (alleen als je die invult), je chatberichten, je blokkades en meldingen, en eventuele verificatieaanvragen."],
+["Waarvoor","Om je account te laten werken, om kamers voor jouw leeftijd en lidmaatschap te openen, om de chat te tonen, en om misbruik tegen te gaan."],
+["Wat anderen zien","Je gebruikersnaam, foto, stad, beroep (met vinkje) en je berichten. Je geboortejaar en e-mailadres zien andere leden nooit."],
+["Waar het staat","Je gegevens staan bij onze hostingpartner Supabase in een datacenter in de EU (Ierland). De website draait via GitHub Pages."],
+["Hoe lang","Zolang je account bestaat. Verwijder je je account, dan wissen we je profiel, foto, berichten, blokkades en aanvragen."],
+["Jouw rechten","Je mag je gegevens inzien, laten verbeteren of laten wissen. Wissen kun je zelf via Instellingen → Account verwijderen. Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens."]
+,["Contact",LEGAL_MAIL?("Vragen over privacy? Mail naar "+LEGAL_MAIL+"."):"Contactgegevens volgen."]]]};
+function legal(k){
+var L=LEGAL[k],o=document.createElement("div");o.className="ov";
+o.innerHTML='<div class="sheet" style="max-height:80vh;overflow:auto"><b>'+esc(L[0])+'</b><div class="small" style="margin:4px 0 10px">Conceptversie, nog niet door een jurist gecontroleerd.</div>'
++L[1].map(function(x){return '<div style="margin:10px 0"><b style="font-size:14px">'+esc(x[0])+'</b><div class="small" style="color:var(--ink);font-size:13px;line-height:1.45">'+esc(x[1])+'</div></div>'}).join("")
++'<button class="btn" id="lc">Sluiten</button></div>';
+o.querySelector("#lc").onclick=function(){o.remove()};document.body.appendChild(o)}
+
+function delAcc(p){
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Instellingen</button></div><div class="card"><h3 style="margin:0 0 8px">Account verwijderen</h3><div class="small">Hiermee verwijder je voorgoed je profiel, foto, berichten, blokkades en aanvragen. Dit kan niet ongedaan worden gemaakt.</div><label>Typ VERWIJDER om te bevestigen</label><input type="text" id="dc" autocapitalize="characters" autocomplete="off"><button class="btn" id="dg" style="background:#8a3b3b">Definitief verwijderen</button><div id="msg"></div></div>';
+$("#bk").onclick=function(){settings(p)};
+$("#dg").onclick=async function(){
+if($("#dc").value.trim().toUpperCase()!=="VERWIJDER"){say("Typ eerst VERWIJDER.");return}
+this.disabled=true;say("Bezig met verwijderen…",true);
+try{
+var f=await sb.storage.from("avatars").list(p.id);
+if(f.data&&f.data.length)await sb.storage.from("avatars").remove(f.data.map(function(x){return p.id+"/"+x.name}));
+var r=await sb.rpc("delete_my_account");
+if(r.error)throw r.error;
+if(appChan){sb.removeChannel(appChan);appChan=null;appSub=false}
+leave();
+await sb.auth.signOut();mode="login";auth();say("Je account is verwijderd.",true)
+}catch(e){this.disabled=false;say("Verwijderen lukt niet. Probeer het later opnieuw.")}}}
+
 async function verifyReq(p){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Instellingen</button></div><div class="card" id="vr"><div class="small c">Laden…</div></div>';
 $("#bk").onclick=function(){settings(p)};
@@ -174,7 +221,8 @@ var v=p.verification==="verified";
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="card c"><div class="avatar" id="av">'+avh(p)+'</div><button class="back" id="ph">Foto wijzigen</button><input type="file" id="fi" accept="image/*" hidden></div>'
 +'<div class="card" style="margin-top:12px"><label style="margin-top:0">Gebruikersnaam</label><div style="font-size:16px;font-weight:600">@'+esc(p.username)+'</div><div class="small" style="margin-top:2px">Je gebruikersnaam is vast en kan niet worden gewijzigd.</div><label>Stad</label><input type="text" id="ct" maxlength="30" value="'+qa(p.city)+'" placeholder="bijv. Amsterdam">'
 +(v?'<label>Wat je doet</label><input type="text" id="oc" maxlength="30" value="'+qa(p.occupation)+'" placeholder="bijv. presentatrice">':'<p class="small">Met een vinkje kun je hier tonen wat je doet.</p>')
-+'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div>'+(v?'':'<button class="btn ghost" id="vq">Verificatie aanvragen</button>')+'<button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button>';
++'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div>'+(v?'':'<button class="btn ghost" id="vq">Verificatie aanvragen</button>')+'<button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button><div class="c" style="margin-top:14px"><button class="back" id="g1">Voorwaarden</button> · <button class="back" id="g2">Privacy</button></div><div class="c"><button class="back" id="dz" style="color:#c96a6a;font-weight:500">Account verwijderen</button></div>';
+$("#g1").onclick=function(){legal("terms")};$("#g2").onclick=function(){legal("privacy")};$("#dz").onclick=function(){delAcc(p)};
 $("#bk").onclick=function(){profile(p)};$("#bl").onclick=function(){blocked(p)};if(!v)$("#vq").onclick=function(){verifyReq(p)};
 $("#ph").onclick=function(){$("#fi").click()};
 $("#fi").onchange=async function(){var f=this.files[0];if(!f)return;say("Foto uploaden…",true);
