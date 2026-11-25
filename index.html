@@ -51,6 +51,20 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .card.glass{border-color:rgba(201,169,110,.45);box-shadow:0 12px 40px rgba(120,90,50,.14),0 0 0 1px rgba(201,169,110,.12);animation:fi 1s .15s ease both}
 .foot{text-align:center;margin-top:18px;font-size:12px;color:var(--mut);letter-spacing:.08em}
 @keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.room{padding:15px 16px;border-radius:20px;gap:14px;transition:transform .15s,box-shadow .15s;box-shadow:0 2px 10px rgba(120,90,50,.06)}
+.room:active{transform:scale(.985)}
+.ico{flex:none;width:46px;height:46px;border-radius:50%;border:1px solid var(--gold);display:grid;place-items:center;color:var(--gold);background:rgba(201,169,110,.09)}
+.ico svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.room.lock{opacity:1}.room.lock .ico{color:var(--mut);border-color:var(--line);background:none}.room.lock b{color:var(--mut)}
+.room.vip{background:linear-gradient(135deg,rgba(201,169,110,.16),transparent 70%),var(--card)}
+.room .tx{display:block;flex:1;min-width:0}.room .tx .small{display:block;margin-top:2px}
+.sec{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--mut);margin:22px 4px 0}
+.sec:first-child{margin-top:6px}
+.room{position:relative;overflow:hidden;padding:20px 18px 20px 24px;background:linear-gradient(110deg,color-mix(in srgb,var(--t,#c9a96e) 13%,transparent),transparent 72%),var(--card)}
+.room:before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;background:var(--t,#c9a96e)}
+.room b{font:600 20px Georgia,"Times New Roman",serif;letter-spacing:.01em}
+.room.lock{opacity:.72}.room.lock:before{opacity:.4}
+.room.vip{background:linear-gradient(110deg,color-mix(in srgb,var(--t,#c9a96e) 20%,transparent),transparent 72%),var(--card)}
 .send{display:flex;gap:8px;margin-top:10px}.send input{flex:1}.send button{width:auto;margin:0;padding:0 20px}
 </style>
 </head>
@@ -317,8 +331,16 @@ return '<button class="back" data-i="'+i+'" style="display:flex;align-items:cent
 box.querySelectorAll("[data-i]").forEach(function(b){b.onclick=function(){member(rows[+b.dataset.i].id,p,function(){home(p)})}})},300)};
 var g=await sb.from("rooms").select("*").order("sort");
 if(g.error||!g.data){$("#rl").textContent="Chatrooms laden lukt niet.";return}
-var h="";g.data.forEach(function(r,i){var ok=can(r,p);
-h+='<button class="room'+(r.access==="vip"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'"><span class="ic">'+(ok?(r.access==="vip"?"✦":"💬"):"🔒")+'</span><span><b>'+esc(r.name)+'</b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">'+dot(0)+'0 online</span></button>'});
+var IC={randstad:"M3 20V10h4v10M9 20V4h5v16M16 20v-8h5v8M2 20h20",zuid:"M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1","noord-oost":"M3 9c3-3 5 3 9 0s6 3 9 0M3 15c3-3 5 3 9 0s6 3 9 0",nightlife:"M9 18V6l11-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM20 16a3 3 0 11-6 0 3 3 0 016 0z",creators:"M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 100-8 4 4 0 000 8z",gold:"M3 18L2 7l6 5 4-7 4 7 6-5-1 11zM3 21h18",latenight:"M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",vip:"M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 6 3-6M12 21L9 9M12 21l3-12"};
+var LOCK="M6 11V8a6 6 0 0112 0v3M5 11h14v10H5z";
+function icon(slug,lock){return '<span class="ico"><svg viewBox="0 0 24 24"><path d="'+(lock?LOCK:(IC[slug]||"M12 3a9 9 0 100 18 9 9 0 000-18z"))+'"/></svg></span>'}
+var SECT=[["Regio\u2019s",["randstad","zuid","noord-oost"]],["Thema",["nightlife","creators"]],["Exclusief",["gold","latenight","vip"]]];
+var used={},h="";
+var TONE={randstad:"#b07a70",zuid:"#c9a96e","noord-oost":"#8fa3a8",nightlife:"#8a5f86",creators:"#b98d6c",gold:"#d6b565",latenight:"#5a5f8f",vip:"#e8d4a8"};
+function card(r,i){var ok=can(r,p);used[r.slug]=1;
+return '<button class="room'+(r.access==="vip"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'" style="--t:'+(TONE[r.slug]||"#c9a96e")+'"><span class="tx"><b>'+esc(r.name)+'</b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">'+dot(0)+'0 online</span></button>'}
+SECT.forEach(function(sc){var rows=[];g.data.forEach(function(r,i){if(sc[1].indexOf(r.slug)>-1)rows.push(card(r,i))});if(rows.length)h+='<div class="sec">'+sc[0]+'</div>'+rows.join("")});
+var rest=[];g.data.forEach(function(r,i){if(!used[r.slug])rest.push(card(r,i))});if(rest.length)h+='<div class="sec">Meer</div>'+rest.join("");
 $("#rl").className="";$("#rl").innerHTML=h;
 document.querySelectorAll(".room").forEach(function(b){b.onclick=function(){room(g.data[+b.dataset.i],p)}});
 paint()}
