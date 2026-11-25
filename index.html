@@ -127,12 +127,34 @@ var i=await sb.from("profiles").insert({id:user.id,username:un}).select().single
 if(i.data){gate(i.data,user)}else say(i.error&&i.error.code==="23505"?"Deze gebruikersnaam is al bezet.":"Opslaan lukt niet.")}}
 
 function qa(t){return esc(t).replace(/"/g,"&quot;")}
+function cntLine(c){var f=c.followers||0,g=c.following||0;return '<b>'+f+'</b> '+(f===1?'volger':'volgers')+' · <b>'+g+'</b> volgend'}
+async function member(id,p,back){
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Terug</button></div><div class="card c" id="mb"><div class="small">Laden…</div></div>';
+$("#bk").onclick=back;
+var pr=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation").eq("id",id).maybeSingle();
+var box=$("#mb");
+if(!pr.data){box.innerHTML='<div class="small">Dit profiel is niet beschikbaar.</div>';return}
+var u=pr.data,v=u.verification==="verified",mine=id===p.id;
+var cn=await sb.rpc("follow_counts",{uid:id}),c=cn.data||{followers:0,following:0};
+var isF=false;
+if(!mine){var fr=await sb.from("follows").select("followed").eq("followed",id).limit(1);isF=!!(fr.data&&fr.data.length)}
+var sub=[v?u.occupation:"",u.city].filter(Boolean).join(" · ");
+box.innerHTML='<div class="avatar">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
++(mine?'':'<button class="btn'+(isF?' ghost':'')+'" id="fo">'+(isF?'Volgend':'Volgen')+'</button><div id="msg"></div>');
+if(!mine){$("#fo").onclick=async function(){
+this.disabled=true;
+var e=isF?await sb.from("follows").delete().eq("followed",id):await sb.from("follows").insert({followed:id});
+if(e.error&&e.error.code!=="23505"){this.disabled=false;say("Dat lukt niet. Probeer het opnieuw.");return}
+isF=!isF;c.followers=Math.max(0,(c.followers||0)+(isF?1:-1));
+this.disabled=false;this.className="btn"+(isF?" ghost":"");this.textContent=isF?"Volgend":"Volgen";$("#fc").innerHTML=cntLine(c)}}}
+
 function profile(p,note){
 var v=p.verification==="verified",sub=[v?p.occupation:"",p.city].filter(Boolean).join(" · ");
-app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
 +(note?'<div class="msg ok c">'+esc(note)+'</div>':'')
 +'<button class="btn ghost" id="st">Instellingen</button>';
-$("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)}}
+$("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)};
+sb.rpc("follow_counts",{uid:p.id}).then(function(r){var el=document.getElementById("fcc");if(el&&r.data)el.innerHTML=cntLine(r.data)})}
 
 async function blocked(p){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Instellingen</button></div><div class="card" id="bl"><div class="small c">Laden…</div></div>';
@@ -289,7 +311,8 @@ if(!ok)return;
 var box=$("#msgs"),seen={},SEL="id,body,created_at,user_id,profiles(username,verification,avatar_url)";
 function add(m){if(!m||seen[m.id])return;seen[m.id]=1;var me=m.user_id===p.id,pr=m.profiles||{};
 var d=document.createElement("div");d.className="b"+(me?" me":"");
-d.innerHTML='<div class="n"><span class="mini sm">'+avh(pr)+'</span>@'+esc(pr.username||"?")+(pr.verification==="verified"?'<span class="ck">✓</span>':'')+'</div>'+esc(m.body);
+d.innerHTML='<div class="n"><span class="who" style="cursor:pointer"><span class="mini sm">'+avh(pr)+'</span>@'+esc(pr.username||"?")+(pr.verification==="verified"?'<span class="ck">✓</span>':'')+'</span></div>'+esc(m.body);
+d.querySelector(".who").onclick=function(){member(m.user_id,p,function(){room(r,p)})};
 d.dataset.uid=m.user_id;
 if(!me){var fb=document.createElement("button");fb.className="fl";fb.textContent="⋯";fb.setAttribute("aria-label","Melden of blokkeren");fb.onclick=function(){menu(m,pr)};d.querySelector(".n").appendChild(fb)}
 box.appendChild(d);box.scrollTop=box.scrollHeight}
