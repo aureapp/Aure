@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Auré</title>
+<style>
+:root{--bg:#f5f3f1;--card:#fdfcfb;--ink:#4a403c;--mut:#9a8b84;--acc:#a8746a;--gold:#c9a96e;--line:#e6dfd9;--other:#ece6e1;--marble:radial-gradient(circle at 18% 8%,rgba(255,255,255,.95),transparent 55%),linear-gradient(118deg,transparent 38%,rgba(150,135,125,.13) 39%,transparent 40.2%),linear-gradient(112deg,transparent 52%,rgba(201,169,110,.16) 52.6%,transparent 53.6%)}
+@media (prefers-color-scheme:dark){:root{--bg:#211d1b;--card:#2c2725;--ink:#f1ebe6;--mut:#b8aca4;--line:#433a36;--other:#383230;--marble:linear-gradient(118deg,transparent 38%,rgba(201,169,110,.08) 39%,transparent 40.2%)}}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:var(--marble),var(--bg);background-attachment:fixed;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#app{max-width:440px;margin:0 auto;padding:16px}
+.brand{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:26px;letter-spacing:.16em;text-transform:uppercase;text-align:center;margin:18px 0 6px}
+.logo{display:inline-block;width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,#e9d3a6,#c9a96e 55%,#a8746a);box-shadow:0 0 0 3px rgba(201,169,110,.25);margin-right:10px;vertical-align:middle}
+.sub{text-align:center;color:var(--mut);margin-bottom:20px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 2px 10px rgba(120,90,50,.07)}
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
+.btn{width:100%;margin-top:16px;background:var(--acc);color:#fff;border:0;border-radius:99px;padding:14px;font:inherit;font-weight:600;cursor:pointer}
+.btn.ghost{background:none;color:var(--acc);border:1px solid var(--gold)}
+.tabs{display:flex;gap:8px;margin-bottom:6px}.tabs button{flex:1;padding:11px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.tabs button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold);font-weight:700}
+.msg{margin-top:12px;font-size:14px;color:var(--acc)}.ok{color:#5f8a5f}
+.chk{display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:14px}
+.avatar{width:92px;height:92px;border-radius:50%;margin:6px auto 10px;display:grid;place-items:center;font:34px Georgia,serif;color:#fff;background:linear-gradient(135deg,#e9d3a6,#c9a96e 55%,#a8746a);box-shadow:0 0 0 2px var(--gold)}
+.ck{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--gold);color:#fff;font-size:10px;margin-left:6px;vertical-align:middle}
+.c{text-align:center}.small{font-size:12px;color:var(--mut)}
+.room{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-top:10px;padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.room b{display:block}.room .ic{font-size:20px;width:28px;text-align:center}.room.vip{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}.room.lock{opacity:.6}
+.top{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}
+.back{background:none;border:0;color:var(--acc);font:inherit;font-weight:600;cursor:pointer;padding:6px 0}
+#msgs{height:55vh;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.b{max-width:80%;padding:9px 13px;border-radius:16px;background:var(--other);font-size:15px;word-wrap:break-word}
+.b .n{font-size:12px;color:var(--mut);margin-bottom:2px}.b.me{align-self:flex-end;background:var(--acc);color:#fff}.b.me .n{color:rgba(255,255,255,.8)}
+.send{display:flex;gap:8px;margin-top:10px}.send input{flex:1}.send button{width:auto;margin:0;padding:0 20px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.js"></script>
+<script>
+var sb=null,mode="login";
+var app=document.getElementById("app");
+function esc(t){var d=document.createElement("div");d.textContent=t==null?"":t;return d.innerHTML}
+function $(q){return document.querySelector(q)}
+function head(){return '<div class="brand"><span class="logo"></span>Auré</div><div class="sub">Chat, ontmoet en groei</div>'}
+function cfg(){try{return JSON.parse(localStorage.getItem("aure_cfg")||"null")}catch(e){return null}}
+function say(t,ok){var m=$("#msg");if(m){m.className="msg"+(ok?" ok":"");m.textContent=t}}
+
+function setup(){
+app.innerHTML=head()+'<div class="card"><b>Koppel je database</b><p class="small">Eenmalig. Plak hier de gegevens van je Supabase-project. Gebruik alleen de <b>Project URL</b> en de <b>publishable key</b> (begint met sb_publishable). Plak hier nooit de secret key.</p><label>Project URL</label><input type="text" id="u" placeholder="https://jouwproject.supabase.co" autocapitalize="none"><label>Publishable key</label><input type="text" id="k" placeholder="sb_publishable_…" autocapitalize="none"><button class="btn" id="go">Opslaan</button><div id="msg"></div></div>';
+$("#go").onclick=function(){var u=$("#u").value.trim().replace(/\/$/,""),k=$("#k").value.trim();
+if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(u)){say("De Project URL ziet er niet goed uit.");return}
+if(/secret|service_role/i.test(k)||k.length<20){say("Dit lijkt niet de publishable key. Gebruik nooit een secret key.");return}
+try{localStorage.setItem("aure_cfg",JSON.stringify({url:u,key:k}))}catch(e){say("Opslaan lukt niet in deze browser.");return}
+start()}}
+
+function auth(){
+var reg=mode==="register";
+app.innerHTML=head()+'<div class="card"><div class="tabs"><button id="t1" class="'+(reg?'':'on')+'">Inloggen</button><button id="t2" class="'+(reg?'on':'')+'">Account maken</button></div>'
++(reg?'<label>Gebruikersnaam</label><input type="text" id="un" placeholder="bijv. sanne.s" maxlength="20" autocapitalize="none" autocomplete="off"><label>Geboortejaar</label><input type="text" id="by" inputmode="numeric" maxlength="4" placeholder="bijv. 1995" autocomplete="off"><div class="small" style="margin-top:4px">Wordt nergens getoond. Alleen om te bepalen welke kamers voor jou open zijn.</div>':'')
++'<label>E-mail</label><input type="email" id="em" autocapitalize="none" autocomplete="email"><label>Wachtwoord</label><input type="password" id="pw" autocomplete="'+(reg?'new-password':'current-password')+'">'
++(reg?'<div class="chk"><input type="checkbox" id="age"><span>Ik ben 18 jaar of ouder. (Testversie: de echte leeftijdscheck volgt.)</span></div>':'')
++'<button class="btn" id="go">'+(reg?'Account maken':'Inloggen')+'</button><div id="msg"></div></div><p class="c small"><a href="#" id="rs" style="color:var(--mut)">Database opnieuw koppelen</a></p>';
+$("#t1").onclick=function(){mode="login";auth()};$("#t2").onclick=function(){mode="register";auth()};
+$("#rs").onclick=function(e){e.preventDefault();localStorage.removeItem("aure_cfg");sb=null;start()};
+if(reg){$("#un").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20)}}
+$("#go").onclick=async function(){
+var em=$("#em").value.trim(),pw=$("#pw").value;
+if(!em||pw.length<8){say("Vul je e-mail in en kies een wachtwoord van minimaal 8 tekens.");return}
+this.disabled=true;
+try{
+if(reg){
+var un=$("#un").value;
+if(!/^[a-z0-9._]{3,20}$/.test(un)){say("Gebruikersnaam: 3 tot 20 tekens (letters, cijfers, punt, underscore).");this.disabled=false;return}
+var by=$("#by").value.trim();
+if(!/^(19|20)\d\d$/.test(by)||+by>new Date().getFullYear()-18){say("Alleen voor 18+. Vul een geldig geboortejaar in.");this.disabled=false;return}
+if(!$("#age").checked){say("Alleen voor 18+.");this.disabled=false;return}
+var r=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,birth_year:+by}}});
+if(r.error){say(r.error.message);this.disabled=false;return}
+if(r.data.session){await afterLogin(r.data.session.user)}
+else{say("Bijna klaar! Bevestig je e-mail via de link in je mailbox en log daarna in.",true);this.disabled=false}
+}else{
+var l=await sb.auth.signInWithPassword({email:em,password:pw});
+if(l.error){say("Inloggen lukt niet. Controleer je e-mail en wachtwoord.");this.disabled=false;return}
+await afterLogin(l.data.user)}
+}catch(e){say("Er ging iets mis. Probeer het opnieuw.");this.disabled=false}}}
+
+async function afterLogin(user){
+var g=await sb.from("profiles").select("*").eq("id",user.id).maybeSingle();
+if(g.data){gate(g.data,user);return}
+var un=(user.user_metadata||{}).username;
+if(un){var i=await sb.from("profiles").insert({id:user.id,username:un}).select().single();
+if(i.data){gate(i.data,user);return}
+choose(user,i.error&&i.error.code==="23505"?"Deze gebruikersnaam is al bezet. Kies een andere.":"")}
+else choose(user,"")}
+
+function choose(user,m){
+app.innerHTML=head()+'<div class="card"><b>Kies je gebruikersnaam</b><label>Gebruikersnaam</label><input type="text" id="un" maxlength="20" autocapitalize="none"><button class="btn" id="go">Opslaan</button><div id="msg" class="msg">'+esc(m)+'</div></div>';
+$("#un").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20)};
+$("#go").onclick=async function(){var un=$("#un").value;
+if(!/^[a-z0-9._]{3,20}$/.test(un)){say("Minimaal 3 tekens.");return}
+var i=await sb.from("profiles").insert({id:user.id,username:un}).select().single();
+if(i.data){gate(i.data,user)}else say(i.error&&i.error.code==="23505"?"Deze gebruikersnaam is al bezet.":"Opslaan lukt niet.")}}
+
+function profile(p){
+var v=p.verification==="verified",sub=[v?p.occupation:"",p.city].filter(Boolean).join(" · ");
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar">'+esc(p.username[0].toUpperCase())+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(p.plan)+'</div></div>'
++'<div class="card" style="margin-top:12px"><label style="margin-top:0">Stad</label><input type="text" id="ct" maxlength="30" value="'+esc(p.city).replace(/"/g,"&quot;")+'" placeholder="bijv. Amsterdam">'
++(v?'<label>Wat je doet</label><input type="text" id="oc" maxlength="30" value="'+esc(p.occupation).replace(/"/g,"&quot;")+'" placeholder="bijv. presentatrice">':'<p class="small">Met een vinkje kun je hier tonen wat je doet.</p>')
++'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div><button class="btn ghost" id="lo">Uitloggen</button>';
+$("#sv").onclick=async function(){var d={city:$("#ct").value.trim()||null};if(v)d.occupation=($("#oc").value.trim())||null;
+var u=await sb.from("profiles").update(d).eq("id",p.id).select().single();
+if(u.data){p=u.data;say("✓ Opgeslagen",true)}else say("Opslaan lukt niet.")};
+$("#bk").onclick=function(){home(p)};
+$("#lo").onclick=async function(){await sb.auth.signOut();mode="login";auth()}}
+
+var PLANS=["bronze","gold","diamond"],chan=null,myYear=null;
+function master(p){return p.verification==="verified"||p.plan==="diamond"}
+function planOk(r,p){
+if(master(p)||r.access==="free")return true;
+if(r.access==="vip")return false;
+if(r.access==="age30")return !!myYear&&(new Date().getFullYear()-myYear>=30);
+return PLANS.indexOf(p.plan)>=PLANS.indexOf(r.access)}
+function hh(t){return String(t).slice(0,5)}
+function isOpen(r){if(!r.opens)return true;
+var t=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date()),o=hh(r.opens),c=hh(r.closes);
+return o<c?(t>=o&&t<c):(t>=o||t<c)}
+function can(r,p){return planOk(r,p)&&isOpen(r)}
+function need(r,p){
+var tm=r.opens?"open van "+hh(r.opens)+" tot "+hh(r.closes):"";
+if(planOk(r,p))return "Gesloten, "+tm+".";
+var b=r.access==="vip"?"Alleen voor verified leden en Diamond":(r.access==="age30"?"Voor leden van 30 jaar en ouder":"Vanaf "+r.access);
+return b+(tm?", "+tm:"")+"."}
+async function home(p){
+if(chan){sb.removeChannel(chan);chan=null}
+var v=p.verification==="verified";
+app.innerHTML=head()+'<div class="top"><span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><div id="rl" class="small c">Laden…</div>';
+$("#pf").onclick=function(){profile(p)};
+var g=await sb.from("rooms").select("*").order("sort");
+if(g.error||!g.data){$("#rl").textContent="Chatrooms laden lukt niet.";return}
+var h="";g.data.forEach(function(r,i){var ok=can(r,p);
+h+='<button class="room'+(r.access==="vip"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'"><span class="ic">'+(ok?(r.access==="vip"?"✦":"💬"):"🔒")+'</span><span><b>'+esc(r.name)+'</b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span></button>'});
+$("#rl").className="";$("#rl").innerHTML=h;
+document.querySelectorAll(".room").forEach(function(b){b.onclick=function(){room(g.data[+b.dataset.i],p)}})}
+
+async function room(r,p){
+var ok=can(r,p);
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button><b>'+esc(r.name)+'</b></div>'
++(ok?'<div class="card" style="padding:0"><div id="msgs"></div></div><div class="send"><input type="text" id="tx" maxlength="500" placeholder="Schrijf een bericht…" autocomplete="off"><button class="btn" id="sd">Stuur</button></div><div id="msg"></div>'
+:'<div class="card c"><div style="font-size:30px">🔒</div><p><b>'+esc(r.name)+'</b></p><p class="small">'+esc(need(r,p))+'</p></div>');
+$("#bk").onclick=function(){home(p)};
+if(!ok)return;
+var box=$("#msgs"),seen={},SEL="id,body,created_at,user_id,profiles(username,verification)";
+function add(m){if(!m||seen[m.id])return;seen[m.id]=1;var me=m.user_id===p.id,pr=m.profiles||{};
+var d=document.createElement("div");d.className="b"+(me?" me":"");
+d.innerHTML='<div class="n">@'+esc(pr.username||"?")+(pr.verification==="verified"?'<span class="ck">✓</span>':'')+'</div>'+esc(m.body);
+box.appendChild(d);box.scrollTop=box.scrollHeight}
+var g=await sb.from("messages").select(SEL).eq("room",r.slug).order("created_at",{ascending:false}).limit(50);
+if(g.data){g.data.reverse().forEach(add)}
+if(!box.children.length)box.innerHTML='<div class="small c" style="margin:auto">Nog geen berichten. Zeg als eerste hallo!</div>';
+chan=sb.channel("room-"+r.slug).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"room=eq."+r.slug},async function(e){
+var q=await sb.from("messages").select(SEL).eq("id",e.new.id).single();if(q.data){var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(q.data)}}).subscribe();
+async function send(){var t=$("#tx").value.trim();if(!t)return;$("#sd").disabled=true;
+var i=await sb.from("messages").insert({room:r.slug,body:t}).select(SEL).single();
+$("#sd").disabled=false;
+if(i.error){say("Versturen lukt niet.");return}
+$("#tx").value="";var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(i.data);$("#tx").focus()}
+$("#sd").onclick=send;$("#tx").onkeydown=function(e){if(e.key==="Enter")send()}}
+
+async function gate(p,user){
+myYear=null;
+var q=await sb.from("private_profiles").select("birth_year").eq("id",user.id).maybeSingle();
+if(q.data){myYear=q.data.birth_year;home(p);return}
+var by=(user.user_metadata||{}).birth_year;
+if(by){var i=await sb.from("private_profiles").insert({id:user.id,birth_year:by});if(!i.error){myYear=by;home(p);return}}
+askYear(p,user)}
+function askYear(p,user){
+app.innerHTML=head()+'<div class="card"><b>Nog één ding</b><p class="small">Vul je geboortejaar in. Het wordt nergens getoond en bepaalt welke kamers voor jou open zijn. Je kunt het later niet meer wijzigen.</p><label>Geboortejaar</label><input type="text" id="by" inputmode="numeric" maxlength="4" placeholder="bijv. 1995"><button class="btn" id="go">Opslaan</button><div id="msg"></div></div>';
+$("#go").onclick=async function(){var by=$("#by").value.trim();
+if(!/^(19|20)\d\d$/.test(by)||+by>new Date().getFullYear()-18){say("Alleen voor 18+. Vul een geldig geboortejaar in.");return}
+var i=await sb.from("private_profiles").insert({id:user.id,birth_year:+by});
+if(i.error){say("Opslaan lukt niet.");return}
+myYear=+by;home(p)}}
+
+async function start(){
+var c=cfg();
+if(!c||!window.supabase){setup();return}
+if(!sb)sb=window.supabase.createClient(c.url,c.key);
+var s=await sb.auth.getSession();
+if(s.data&&s.data.session){afterLogin(s.data.session.user)}else auth()}
+start();
+</script>
+</body>
+</html>
