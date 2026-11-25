@@ -142,13 +142,40 @@ if(!g.data.length){box.innerHTML='<div class="small c">Je hebt niemand geblokkee
 box.innerHTML=g.data.map(function(r){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0"><b>@'+esc((r.profiles||{}).username||"?")+'</b><button class="back" data-id="'+esc(r.blocked)+'">Deblokkeren</button></div>'}).join("");
 box.querySelectorAll("[data-id]").forEach(function(b){b.onclick=async function(){await sb.from("blocks").delete().eq("blocked",b.dataset.id);blocked(p)}})}
 
+async function verifyReq(p){
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Instellingen</button></div><div class="card" id="vr"><div class="small c">Laden…</div></div>';
+$("#bk").onclick=function(){settings(p)};
+var g=await sb.from("verification_requests").select("status,created_at").order("created_at",{ascending:false}).limit(1);
+var box=$("#vr");
+if(g.error){box.innerHTML='<div class="small c">Laden lukt niet.</div>';return}
+var st=g.data&&g.data[0]?g.data[0].status:null;
+if(st==="pending"){box.innerHTML='<h3 style="margin:0 0 8px">Aanvraag in behandeling</h3><div class="small">We nemen contact op met je management om te bevestigen dat dit account echt van jou is. Dit kan een paar dagen duren.</div>';return}
+var note=st==="rejected"?'<div class="msg c" style="margin-bottom:10px">Je vorige aanvraag is niet goedgekeurd. Je kunt opnieuw aanvragen met meer gegevens.</div>':'';
+box.innerHTML=note+'<h3 style="margin:0 0 6px">Verificatie aanvragen</h3><div class="small">Het vinkje is voor bekende personen. We controleren je aanvraag via je management.</div>'
++'<label>Volledige naam</label><input type="text" id="v1" maxlength="80">'
++'<label>Waar ben je bekend van?</label><input type="text" id="v2" maxlength="120" placeholder="bijv. presentatrice, zangeres">'
++'<label>Instagram-account</label><input type="text" id="v3" maxlength="80" placeholder="@naam">'
++'<label>TikTok-account</label><input type="text" id="v4" maxlength="80" placeholder="@naam">'
++'<label>Andere geverifieerde accounts (optioneel)</label><input type="text" id="v5" maxlength="200">'
++'<label>Jouw e-mailadres</label><input type="email" id="v6" maxlength="120">'
++'<label>Naam van je management of bureau</label><input type="text" id="v7" maxlength="120" placeholder="of: geen management">'
++'<label>E-mailadres of telefoon van je management</label><input type="text" id="v8" maxlength="120">'
++'<button class="btn" id="vs">Aanvraag versturen</button><div id="msg"></div>';
+$("#vs").onclick=async function(){
+function V(i){return $("#v"+i).value.trim()}
+if(!V(1)||!V(2)||!V(6)||(!V(3)&&!V(4))){say("Vul minstens je naam, waar je bekend van bent, e-mail en een Instagram of TikTok in.");return}
+this.disabled=true;
+var i=await sb.from("verification_requests").insert({full_name:V(1),known_for:V(2),instagram:V(3)||null,tiktok:V(4)||null,other_accounts:V(5)||null,contact_email:V(6),mgmt_name:V(7)||null,mgmt_contact:V(8)||null});
+if(i.error){this.disabled=false;say("Versturen lukt niet. Probeer het later opnieuw.");return}
+box.innerHTML='<h3 style="margin:0 0 8px">Aanvraag verstuurd ✓</h3><div class="small">Bedankt! We nemen contact op met je management om dit te bevestigen.</div>'}}
+
 function settings(p){
 var v=p.verification==="verified";
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="card c"><div class="avatar" id="av">'+avh(p)+'</div><button class="back" id="ph">Foto wijzigen</button><input type="file" id="fi" accept="image/*" hidden></div>'
 +'<div class="card" style="margin-top:12px"><label style="margin-top:0">Gebruikersnaam</label><div style="font-size:16px;font-weight:600">@'+esc(p.username)+'</div><div class="small" style="margin-top:2px">Je gebruikersnaam is vast en kan niet worden gewijzigd.</div><label>Stad</label><input type="text" id="ct" maxlength="30" value="'+qa(p.city)+'" placeholder="bijv. Amsterdam">'
 +(v?'<label>Wat je doet</label><input type="text" id="oc" maxlength="30" value="'+qa(p.occupation)+'" placeholder="bijv. presentatrice">':'<p class="small">Met een vinkje kun je hier tonen wat je doet.</p>')
-+'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div><button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button>';
-$("#bk").onclick=function(){profile(p)};$("#bl").onclick=function(){blocked(p)};
++'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div>'+(v?'':'<button class="btn ghost" id="vq">Verificatie aanvragen</button>')+'<button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button>';
+$("#bk").onclick=function(){profile(p)};$("#bl").onclick=function(){blocked(p)};if(!v)$("#vq").onclick=function(){verifyReq(p)};
 $("#ph").onclick=function(){$("#fi").click()};
 $("#fi").onchange=async function(){var f=this.files[0];if(!f)return;say("Foto uploaden…",true);
 try{var url=await uploadAvatar(f,p.id);var u=await sb.from("profiles").update({avatar_url:url}).eq("id",p.id).select().single();
