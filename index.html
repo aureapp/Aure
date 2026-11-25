@@ -28,6 +28,10 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .mini{display:inline-grid;place-items:center;overflow:hidden;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#e9d3a6,#c9a96e 55%,#a8746a);color:#fff;font:14px Georgia,serif;vertical-align:middle;margin-right:8px}
 .mini.sm{width:20px;height:20px;font-size:11px;margin-right:6px}
 .dot{color:#9a8b84}.dot.on{color:#3fb97a}
+.fl{float:right;background:none;border:0;color:var(--mut);font-size:18px;line-height:1;cursor:pointer;padding:0 0 0 12px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.sheet{background:var(--card);border-radius:22px 22px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:440px;border:1px solid var(--line)}
+.sheet .btn{margin-top:10px}
 .cnt{margin-left:auto;font-size:12px;color:var(--mut);white-space:nowrap;padding-left:8px}
 .c{text-align:center}.small{font-size:12px;color:var(--mut)}
 .room{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-top:10px;padding:14px 16px;border-radius:18px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
@@ -128,13 +132,23 @@ app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatroom
 +'<button class="btn ghost" id="st">Instellingen</button>';
 $("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)}}
 
+async function blocked(p){
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Instellingen</button></div><div class="card" id="bl"><div class="small c">Laden…</div></div>';
+$("#bk").onclick=function(){settings(p)};
+var g=await sb.from("blocks").select("blocked,profiles!blocked(username)");
+var box=$("#bl");
+if(g.error){box.innerHTML='<div class="small c">Laden lukt niet.</div>';return}
+if(!g.data.length){box.innerHTML='<div class="small c">Je hebt niemand geblokkeerd.</div>';return}
+box.innerHTML=g.data.map(function(r){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0"><b>@'+esc((r.profiles||{}).username||"?")+'</b><button class="back" data-id="'+esc(r.blocked)+'">Deblokkeren</button></div>'}).join("");
+box.querySelectorAll("[data-id]").forEach(function(b){b.onclick=async function(){await sb.from("blocks").delete().eq("blocked",b.dataset.id);blocked(p)}})}
+
 function settings(p){
 var v=p.verification==="verified";
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="card c"><div class="avatar" id="av">'+avh(p)+'</div><button class="back" id="ph">Foto wijzigen</button><input type="file" id="fi" accept="image/*" hidden></div>'
 +'<div class="card" style="margin-top:12px"><label style="margin-top:0">Gebruikersnaam</label><div style="font-size:16px;font-weight:600">@'+esc(p.username)+'</div><div class="small" style="margin-top:2px">Je gebruikersnaam is vast en kan niet worden gewijzigd.</div><label>Stad</label><input type="text" id="ct" maxlength="30" value="'+qa(p.city)+'" placeholder="bijv. Amsterdam">'
 +(v?'<label>Wat je doet</label><input type="text" id="oc" maxlength="30" value="'+qa(p.occupation)+'" placeholder="bijv. presentatrice">':'<p class="small">Met een vinkje kun je hier tonen wat je doet.</p>')
-+'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div><button class="btn ghost" id="lo">Uitloggen</button>';
-$("#bk").onclick=function(){profile(p)};
++'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div><button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button>';
+$("#bk").onclick=function(){profile(p)};$("#bl").onclick=function(){blocked(p)};
 $("#ph").onclick=function(){$("#fi").click()};
 $("#fi").onchange=async function(){var f=this.files[0];if(!f)return;say("Foto uploaden…",true);
 try{var url=await uploadAvatar(f,p.id);var u=await sb.from("profiles").update({avatar_url:url}).eq("id",p.id).select().single();
@@ -201,7 +215,26 @@ var box=$("#msgs"),seen={},SEL="id,body,created_at,user_id,profiles(username,ver
 function add(m){if(!m||seen[m.id])return;seen[m.id]=1;var me=m.user_id===p.id,pr=m.profiles||{};
 var d=document.createElement("div");d.className="b"+(me?" me":"");
 d.innerHTML='<div class="n"><span class="mini sm">'+avh(pr)+'</span>@'+esc(pr.username||"?")+(pr.verification==="verified"?'<span class="ck">✓</span>':'')+'</div>'+esc(m.body);
+d.dataset.uid=m.user_id;
+if(!me){var fb=document.createElement("button");fb.className="fl";fb.textContent="⋯";fb.setAttribute("aria-label","Melden of blokkeren");fb.onclick=function(){menu(m,pr)};d.querySelector(".n").appendChild(fb)}
 box.appendChild(d);box.scrollTop=box.scrollHeight}
+function menu(m,pr){
+var o=document.createElement("div");o.className="ov";
+function close(){o.remove()}
+function main(){o.innerHTML='<div class="sheet"><b>@'+esc(pr.username||"?")+'</b><button class="btn ghost" id="a1">Bericht melden</button><button class="btn ghost" id="a2">Blokkeren</button><button class="back" id="a3" style="width:100%;margin-top:6px">Annuleren</button></div>';
+o.querySelector("#a1").onclick=reasons;o.querySelector("#a2").onclick=blk;o.querySelector("#a3").onclick=close}
+function reasons(){var R=[["spam","Spam of reclame"],["intimidatie","Intimidatie of pesten"],["seksueel","Seksuele of ongewenste inhoud"],["minderjarig","Lijkt minderjarig"],["anders","Anders"]];
+o.innerHTML='<div class="sheet"><b>Waarom meld je dit?</b>'+R.map(function(r){return '<button class="btn ghost" data-r="'+r[0]+'">'+r[1]+'</button>'}).join("")+'<button class="back" id="a3" style="width:100%;margin-top:6px">Terug</button></div>';
+o.querySelector("#a3").onclick=main;
+o.querySelectorAll("[data-r]").forEach(function(b){b.onclick=async function(){
+var i=await sb.from("reports").insert({reported:m.user_id,message_id:m.id,message_text:String(m.body).slice(0,500),room:r.slug,reason:b.dataset.r});
+o.innerHTML='<div class="sheet c"><b>'+(i.error?"Melden lukt niet. Probeer het later opnieuw.":"Bedankt, we kijken ernaar.")+'</b></div>';setTimeout(close,1600)}})}
+async function blk(){
+var i=await sb.from("blocks").insert({blocked:m.user_id});
+if(i.error&&i.error.code!=="23505"){o.innerHTML='<div class="sheet c"><b>Blokkeren lukt niet.</b></div>';setTimeout(close,1600);return}
+box.querySelectorAll('[data-uid="'+m.user_id+'"]').forEach(function(e){e.remove()});
+o.innerHTML='<div class="sheet c"><b>@'+esc(pr.username||"?")+' is geblokkeerd.</b><p class="small">Je ziet geen berichten meer van dit lid. Je kunt dit terugdraaien via Instellingen.</p></div>';setTimeout(close,1900)}
+main();document.body.appendChild(o)}
 var g=await sb.from("messages").select(SEL).eq("room",r.slug).order("created_at",{ascending:false}).limit(50);
 if(g.data){g.data.reverse().forEach(add)}
 if(!box.children.length)box.innerHTML='<div class="small c" style="margin:auto">Nog geen berichten. Zeg als eerste hallo!</div>';
