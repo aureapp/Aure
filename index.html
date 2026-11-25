@@ -41,6 +41,16 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 #msgs{height:55vh;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
 .b{max-width:80%;padding:9px 13px;border-radius:16px;background:var(--other);font-size:15px;word-wrap:break-word}
 .b .n{font-size:12px;color:var(--mut);margin-bottom:2px}.b.me{align-self:flex-end;background:var(--acc);color:#fff}.b.me .n{color:rgba(255,255,255,.8)}
+.hero{text-align:center;padding:30px 0 24px;position:relative;animation:fi .9s ease both}
+.hero:before{content:"";position:absolute;left:50%;top:-10px;width:300px;height:300px;transform:translateX(-50%);background:radial-gradient(circle,rgba(201,169,110,.26),transparent 66%)}
+.hero>*{position:relative}
+.orb{width:46px;height:46px;border-radius:50%;margin:0 auto 20px;background:linear-gradient(135deg,#f3e2bb,#c9a96e 55%,#a8746a);box-shadow:0 0 0 7px rgba(201,169,110,.16),0 0 42px rgba(201,169,110,.5)}
+.wm{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:46px;letter-spacing:.26em;text-indent:.26em;text-transform:uppercase;line-height:1}
+.gl{width:70px;height:1px;margin:18px auto 14px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.tg{color:var(--mut);font-size:13px;letter-spacing:.42em;text-indent:.42em;text-transform:uppercase}
+.card.glass{border-color:rgba(201,169,110,.45);box-shadow:0 12px 40px rgba(120,90,50,.14),0 0 0 1px rgba(201,169,110,.12);animation:fi 1s .15s ease both}
+.foot{text-align:center;margin-top:18px;font-size:12px;color:var(--mut);letter-spacing:.08em}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .send{display:flex;gap:8px;margin-top:10px}.send input{flex:1}.send button{width:auto;margin:0;padding:0 20px}
 </style>
 </head>
@@ -52,7 +62,7 @@ var sb=null,mode="login";
 var app=document.getElementById("app");
 function esc(t){var d=document.createElement("div");d.textContent=t==null?"":t;return d.innerHTML}
 function $(q){return document.querySelector(q)}
-function head(){return '<div class="brand"><span class="logo"></span>Auré</div><div class="sub">Chat, ontmoet en groei</div>'}
+function head(){return '<div class="brand"><span class="logo"></span>Auré</div><div class="sub">The community</div>'}
 var CFG={url:"https://ftjhgxkyihfuhqckalrp.supabase.co",key:"sb_publishable_nMdgdkv1NlA0-VUyIH6EPw_ngRqPEPd"};
 function cfg(){return CFG}
 function say(t,ok){var m=$("#msg");if(m){m.className="msg"+(ok?" ok":"");m.textContent=t}}
@@ -79,11 +89,11 @@ start()}}
 
 function auth(){
 var reg=mode==="register";
-app.innerHTML=head()+'<div class="card"><div class="tabs"><button id="t1" class="'+(reg?'':'on')+'">Inloggen</button><button id="t2" class="'+(reg?'on':'')+'">Account maken</button></div>'
+app.innerHTML='<div class="hero"><div class="orb"></div><div class="wm">Auré</div><div class="gl"></div><div class="tg">The community</div></div><div class="card glass"><div class="tabs"><button id="t1" class="'+(reg?'':'on')+'">Inloggen</button><button id="t2" class="'+(reg?'on':'')+'">Account maken</button></div>'
 +(reg?'<label>Gebruikersnaam</label><input type="text" id="un" placeholder="bijv. sanne.s" maxlength="20" autocapitalize="none" autocomplete="off"><label>Geboortejaar</label><input type="text" id="by" inputmode="numeric" maxlength="4" placeholder="bijv. 1995" autocomplete="off"><div class="small" style="margin-top:4px">Wordt nergens getoond. Alleen om te bepalen welke kamers voor jou open zijn.</div>':'')
 +'<label>E-mail</label><input type="email" id="em" autocapitalize="none" autocomplete="email"><label>Wachtwoord</label><input type="password" id="pw" autocomplete="'+(reg?'new-password':'current-password')+'">'
 +(reg?'<div class="chk"><input type="checkbox" id="age"><span>Ik ben 18 jaar of ouder. (Testversie: de echte leeftijdscheck volgt.)</span></div><div class="chk"><input type="checkbox" id="tm"><span>Ik ga akkoord met de <a href="#" id="l1">voorwaarden</a> en de <a href="#" id="l2">privacyverklaring</a>.</span></div>':'')
-+'<button class="btn" id="go">'+(reg?'Account maken':'Inloggen')+'</button><div id="msg"></div></div>';
++'<button class="btn" id="go">'+(reg?'Account maken':'Inloggen')+'</button><div id="msg"></div></div><div class="foot">ALLEEN VOOR 18+</div>';
 if(reg){$("#l1").onclick=function(e){e.preventDefault();legal("terms")};$("#l2").onclick=function(e){e.preventDefault();legal("privacy")}}
 $("#t1").onclick=function(){mode="login";auth()};$("#t2").onclick=function(){mode="register";auth()};
 if(reg){$("#un").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20)}}
