@@ -290,8 +290,21 @@ return b+(tm?", "+tm:"")+"."}
 async function home(p){
 leave();startPresence(p);setRoom(null);
 var v=p.verification==="verified";
-app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><div id="rl" class="small c">Laden…</div>';
+app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><input type="text" id="sq" placeholder="🔍 Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin-bottom:10px"><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
 $("#pf").onclick=function(){profile(p)};paint();
+var st=null,qn=0;
+$("#sq").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20);var q=this.value;clearTimeout(st);var box=$("#sr");
+if(q.length<2){box.innerHTML="";return}
+st=setTimeout(async function(){var n=++qn;
+var g=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation").ilike("username","%"+q.replace(/_/g,"\\_")+"%").neq("id",p.id).limit(15);
+if(n!==qn)return;
+var bl=await sb.from("blocks").select("blocked"),bs={};(bl.data||[]).forEach(function(x){bs[x.blocked]=1});
+var rows=(g.data||[]).filter(function(u){return !bs[u.id]});
+if(g.error){box.innerHTML='<div class="small c" style="margin-bottom:10px">Zoeken lukt niet.</div>';return}
+if(!rows.length){box.innerHTML='<div class="small c" style="margin-bottom:10px">Geen leden gevonden.</div>';return}
+box.innerHTML='<div class="card" style="padding:4px 14px;margin-bottom:12px">'+rows.map(function(u,i){var v=u.verification==="verified",sub=[v?u.occupation:"",u.city].filter(Boolean).join(" · ");
+return '<button class="back" data-i="'+i+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 0"><span class="mini">'+avh(u)+'</span><span><b>@'+esc(u.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+'<span class="small" style="display:block;font-weight:400">'+esc(sub)+'</span></span></button>'}).join("")+'</div>';
+box.querySelectorAll("[data-i]").forEach(function(b){b.onclick=function(){member(rows[+b.dataset.i].id,p,function(){home(p)})}})},300)};
 var g=await sb.from("rooms").select("*").order("sort");
 if(g.error||!g.data){$("#rl").textContent="Chatrooms laden lukt niet.";return}
 var h="";g.data.forEach(function(r,i){var ok=can(r,p);
