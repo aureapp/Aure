@@ -47,7 +47,8 @@ var app=document.getElementById("app");
 function esc(t){var d=document.createElement("div");d.textContent=t==null?"":t;return d.innerHTML}
 function $(q){return document.querySelector(q)}
 function head(){return '<div class="brand"><span class="logo"></span>Auré</div><div class="sub">Chat, ontmoet en groei</div>'}
-function cfg(){try{return JSON.parse(localStorage.getItem("aure_cfg")||"null")}catch(e){return null}}
+var CFG={url:"https://ftjhgxkyihfuhqckalrp.supabase.co",key:"sb_publishable_nMdgdkv1NlA0-VUyIH6EPw_ngRqPEPd"};
+function cfg(){return CFG}
 function say(t,ok){var m=$("#msg");if(m){m.className="msg"+(ok?" ok":"");m.textContent=t}}
 
 function safeUrl(u){var c=cfg();return(typeof u==="string"&&c&&u.indexOf(c.url+"/storage/v1/object/public/avatars/")===0)?u.replace(/"/g,"%22"):""}
@@ -76,9 +77,8 @@ app.innerHTML=head()+'<div class="card"><div class="tabs"><button id="t1" class=
 +(reg?'<label>Gebruikersnaam</label><input type="text" id="un" placeholder="bijv. sanne.s" maxlength="20" autocapitalize="none" autocomplete="off"><label>Geboortejaar</label><input type="text" id="by" inputmode="numeric" maxlength="4" placeholder="bijv. 1995" autocomplete="off"><div class="small" style="margin-top:4px">Wordt nergens getoond. Alleen om te bepalen welke kamers voor jou open zijn.</div>':'')
 +'<label>E-mail</label><input type="email" id="em" autocapitalize="none" autocomplete="email"><label>Wachtwoord</label><input type="password" id="pw" autocomplete="'+(reg?'new-password':'current-password')+'">'
 +(reg?'<div class="chk"><input type="checkbox" id="age"><span>Ik ben 18 jaar of ouder. (Testversie: de echte leeftijdscheck volgt.)</span></div>':'')
-+'<button class="btn" id="go">'+(reg?'Account maken':'Inloggen')+'</button><div id="msg"></div></div><p class="c small"><a href="#" id="rs" style="color:var(--mut)">Database opnieuw koppelen</a></p>';
++'<button class="btn" id="go">'+(reg?'Account maken':'Inloggen')+'</button><div id="msg"></div></div>';
 $("#t1").onclick=function(){mode="login";auth()};$("#t2").onclick=function(){mode="register";auth()};
-$("#rs").onclick=function(e){e.preventDefault();localStorage.removeItem("aure_cfg");sb=null;start()};
 if(reg){$("#un").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20)}}
 $("#go").onclick=async function(){
 var em=$("#em").value.trim(),pw=$("#pw").value;
