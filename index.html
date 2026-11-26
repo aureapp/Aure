@@ -117,6 +117,9 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .avatar.rg-gold{box-shadow:0 0 0 4px #e2c47a,0 0 26px rgba(230,190,90,.85)!important}
 .avatar.rg-dia{box-shadow:0 0 0 4px #a9cfe4,0 0 22px rgba(143,184,208,.75)!important}
 .av2.rg-gold,.av2.rg-dia,.mini.rg-gold,.mini.rg-dia{border-radius:50%}
+.wlh{font:italic 400 24px/1.25 Georgia,"Times New Roman",serif}
+.wlt{font-size:14px;line-height:1.55;color:var(--mut);margin:8px auto 0;max-width:300px}
+.wln{font:400 56px/1.05 Georgia,"Times New Roman",serif;color:var(--acc);margin:10px 0}
 .send{display:flex;gap:8px;margin-top:10px}.send input{flex:1}.send button{width:auto;margin:0;padding:0 20px}
 </style>
 </head>
@@ -283,6 +286,7 @@ terms:["Gebruiksvoorwaarden",[
 ["Wijzigingen","Auré is in ontwikkeling. Functies, kamers en regels kunnen veranderen. Je kunt je account altijd zelf verwijderen via Instellingen."]]],
 privacy:["Privacyverklaring",[
 ["Welke gegevens we bewaren","Gebruikersnaam, e-mailadres, geboortejaar, profielfoto, stad en beroep (alleen als je die invult), je chatberichten en privéberichten, je blokkades en meldingen, en eventuele verificatieaanvragen."],
+["Wachtlijst","Zet je je op de wachtlijst, dan bewaren we alleen je e-mailadres. We gebruiken het alleen om je te mailen wanneer Auré opent. Wil je van de lijst af, neem dan contact met ons op."],
 ["Waarvoor","Om je account te laten werken, om kamers voor jouw leeftijd en lidmaatschap te openen, om de chat te tonen, en om misbruik tegen te gaan."],
 ["Wat anderen zien","Je gebruikersnaam, foto, stad, beroep (met vinkje) en je berichten. Je geboortejaar en e-mailadres zien andere leden nooit."],
 ["Waar het staat","Je gegevens staan bij onze hostingpartner Supabase in een datacenter in de EU (Ierland). De website draait via GitHub Pages."],
@@ -600,6 +604,29 @@ tx.onkeydown=function(e){
 if(e.key==="Escape"){hideSug();return}
 if(e.key==="Enter"){if(!sug.hidden&&cur.length){e.preventDefault();pick(cur[0]);return}send()}}}
 
+var WACHTLIJST=false;
+function waitlist(){
+app.innerHTML='<div class="hero"><div class="orb"></div><div class="wm">Auré</div><div class="gl"></div><div class="tg">The community</div></div>'
++'<div id="wl"><div class="c" style="margin:0 0 18px"><div class="wlh">De kamers gaan binnenkort open</div><div class="wlt">Zet je op de lijst en hoor als eerste wanneer Auré opent. Iedereen komt op dezelfde avond binnen.</div></div>'
++'<div class="card glass"><label style="margin-top:0">E-mail</label><input type="email" id="we" maxlength="254" autocapitalize="none" autocomplete="email" placeholder="jij@voorbeeld.nl"><div class="chk"><input type="checkbox" id="wa"><span>Ik ben 18 jaar of ouder</span></div><button class="btn" id="wg">Zet me op de lijst</button><div class="small c" style="margin-top:10px">We gebruiken je e-mailadres alleen om je te laten weten wanneer Auré opent. <a href="#" id="wp">Privacy</a></div><div id="msg"></div></div>'
++'<div class="c small" id="wc" style="margin-top:16px"></div></div>'
++'<div class="c" style="margin-top:10px"><button class="back" id="wl2">Al uitgenodigd? Inloggen</button></div><div class="foot">ALLEEN VOOR 18+</div>';
+$("#wl2").onclick=function(){mode="login";auth()};
+$("#wp").onclick=function(e){e.preventDefault();legal("privacy")};
+sb.rpc("waitlist_count").then(function(r){var n=r.data||0,el=document.getElementById("wc");if(el&&n>=50)el.innerHTML='<span style="color:var(--gold)">●</span> <b style="color:var(--ink)">'+n.toLocaleString("nl-NL")+'</b> mensen wachten al'});
+$("#wg").onclick=async function(){
+var em=$("#we").value.trim().toLowerCase();
+if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){say("Vul een geldig e-mailadres in.");return}
+if(!$("#wa").checked){say("Alleen voor 18+.");return}
+this.disabled=true;
+var r=await sb.rpc("join_waitlist",{p_email:em});
+if(r.error||!r.data){this.disabled=false;say("Aanmelden lukt niet. Probeer het later opnieuw.");return}
+$("#wl").innerHTML='<div class="card glass c" style="padding:28px 20px 18px"><div class="small" style="letter-spacing:.24em">JE STAAT OP DE LIJST</div><div class="wln">#'+(+r.data).toLocaleString("nl-NL")+'</div><div class="wlt" style="margin-top:0">We mailen je zodra de kamers opengaan. Nodig je vrienden uit, dan zitten jullie die avond samen in de kamers.</div><button class="btn ghost" id="wi">Nodig vrienden uit</button><div id="msg"></div></div>';
+$("#wi").onclick=async function(){
+var url=location.origin+location.pathname+"#wachtlijst";
+if(navigator.share){try{await navigator.share({title:"Auré",text:"Zet je ook op de wachtlijst van Auré",url:url})}catch(e){}return}
+try{await navigator.clipboard.writeText(url);this.textContent="Link gekopieerd ✓"}catch(e){say(url,true)}}}}
+
 async function gate(p,user){
 myYear=null;
 var q=await sb.from("private_profiles").select("birth_year").eq("id",user.id).maybeSingle();
@@ -620,7 +647,7 @@ var c=cfg();
 if(!c||!window.supabase){setup();return}
 if(!sb)sb=window.supabase.createClient(c.url,c.key);
 var s=await sb.auth.getSession();
-if(s.data&&s.data.session){afterLogin(s.data.session.user)}else auth()}
+if(s.data&&s.data.session){afterLogin(s.data.session.user)}else if(WACHTLIJST||location.hash==="#wachtlijst")waitlist();else auth()}
 start();
 </script>
 </body>
