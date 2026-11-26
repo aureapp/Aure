@@ -316,9 +316,33 @@ function profile(p,note){
 var v=p.verification==="verified",sub=[v?p.occupation:"",p.city].filter(Boolean).join(" · ");
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar'+rg(p)+'">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(p,null)+'<div id="vgx"></div>'+((!p.bio&&!(p.interests||[]).length)?'<div class="small" style="margin-top:8px">Vertel iets over jezelf: voeg een bio en interesses toe via Instellingen.</div>':'')+'<div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
 +(note?'<div class="msg ok c">'+esc(note)+'</div>':'')
-+'<button class="btn ghost" id="lm">Lidmaatschap</button><button class="btn ghost" id="st">Instellingen</button>';
-$("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)};$("#lm").onclick=function(){plans(p)};
++'<button class="btn ghost" id="lm">Lidmaatschap</button><button class="btn ghost" id="st">Instellingen</button>'+(ISADMIN?'<button class="btn" id="adm" style="margin-top:8px">Beheer</button>':'');
+$("#bk").onclick=function(){home(p)};if(ISADMIN)$("#adm").onclick=function(){admin(p)};$("#st").onclick=function(){settings(p)};$("#lm").onclick=function(){plans(p)};
 fillGast(p.id,true);sb.rpc("follow_counts",{uid:p.id}).then(function(r){var el=document.getElementById("fcc");if(el&&r.data)el.innerHTML=cntLine(r.data)})}
+
+var ISADMIN=false;
+function tijd(t){try{return new Date(t).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){return ""}}
+async function admin(p){
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><h2 style="margin:6px 0 10px">Beheer</h2><div id="msg"></div><div id="adv"><div class="small c">Laden…</div></div>';
+$("#bk").onclick=function(){profile(p)};
+var r=await sb.rpc("admin_lijst");
+if(r.error||!r.data){$("#adv").innerHTML='<div class="small c">Laden lukt niet. Ben je beheerder?</div>';return}
+var V=r.data.verif||[],R=r.data.reports||[];
+function row(l,v){return v?'<div class="small" style="margin-top:3px"><b style="color:var(--ink)">'+esc(l)+':</b> '+esc(v)+'</div>':''}
+var h='<div class="sec">Verificaties ('+V.length+')</div>';
+h+=V.length?V.map(function(x,i){return '<div class="card" style="margin-bottom:10px"><b>@'+esc(x.username||"?")+'</b><span class="small"> · '+esc(tijd(x.created_at))+'</span>'+row("Naam",x.full_name)+row("Bekend van",x.known_for)+row("Instagram",x.instagram)+row("TikTok",x.tiktok)+row("Andere accounts",x.other_accounts)+row("E-mail",x.contact_email)+row("Management",x.mgmt_name)+row("Contact management",x.mgmt_contact)
++'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn" data-v="'+i+'" data-ok="1" style="margin:0">Goedkeuren</button><button class="btn ghost" data-v="'+i+'" data-ok="0" style="margin:0">Afwijzen</button></div></div>'}).join(""):'<div class="small c" style="margin-bottom:14px">Geen nieuwe aanvragen.</div>';
+h+='<div class="sec">Meldingen ('+R.length+')</div>';
+h+=R.length?R.map(function(x,i){return '<div class="card" style="margin-bottom:10px"><b>@'+esc(x.reported_name||"?")+'</b><span class="small"> · '+esc(x.room==="dm"?"privébericht":(x.room||""))+' · '+esc(tijd(x.created_at))+'</span>'+row("Reden",x.reason)+(x.message_text?'<div style="margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px">'+esc(x.message_text)+'</div>':'')
++'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'+(x.message_id?'<button class="btn ghost" data-r="'+i+'" data-a="del" style="margin:0;flex:1">Bericht verwijderen</button>':'')+'<button class="btn ghost" data-r="'+i+'" data-a="ban" style="margin:0;flex:1">Account pauzeren</button><button class="btn" data-r="'+i+'" data-a="ok" style="margin:0;flex:1">Klaar</button></div></div>'}).join(""):'<div class="small c">Geen open meldingen.</div>';
+$("#adv").innerHTML=h;
+document.querySelectorAll("[data-v]").forEach(function(b){b.onclick=async function(){var x=V[+b.dataset.v],ok=b.dataset.ok==="1";
+if(!ok&&!confirm("Aanvraag van @"+(x.username||"?")+" afwijzen?"))return;b.disabled=true;
+var q=await sb.rpc("admin_verificatie",{p_id:String(x.id),p_ok:ok});if(q.error){b.disabled=false;say("Dat lukt niet.");return}admin(p)}});
+document.querySelectorAll("[data-r]").forEach(function(b){b.onclick=async function(){var x=R[+b.dataset.r],a=b.dataset.a;
+if(a==="ban"&&!confirm("Account @"+(x.reported_name||"?")+" pauzeren? Diegene kan dan niet meer inloggen."))return;
+if(a==="del"&&!confirm("Dit bericht verwijderen?"))return;b.disabled=true;
+var q=await sb.rpc("admin_melding",{p_id:String(x.id),p_actie:a});if(q.error){b.disabled=false;say("Dat lukt niet.");return}admin(p)}})}
 
 async function blocked(p){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Instellingen</button></div><div class="card" id="bl"><div class="small c">Laden…</div></div>';
@@ -760,6 +784,8 @@ draw()}
 
 async function gate(p,user){
 myYear=null;
+if(p&&p.banned){app.innerHTML=head()+'<div class="card c"><b>Je account is gepauzeerd</b><p class="small">Je account is gepauzeerd na meldingen van andere leden. Denk je dat dit niet klopt? Neem contact met ons op'+(LEGAL_MAIL?' via '+esc(LEGAL_MAIL):'')+'.</p><button class="btn ghost" id="lo2">Uitloggen</button></div>';$("#lo2").onclick=async function(){await sb.auth.signOut();mode="login";auth()};return}
+ISADMIN=false;sb.rpc("is_admin").then(function(r){ISADMIN=!!r.data});
 var q=await sb.from("private_profiles").select("birth_year").eq("id",user.id).maybeSingle();
 if(q.data){myYear=q.data.birth_year;enter(p);return}
 var by=(user.user_metadata||{}).birth_year;
@@ -778,7 +804,9 @@ var c=cfg();
 if(!c||!window.supabase){setup();return}
 if(!sb)sb=window.supabase.createClient(c.url,c.key);
 var s=await sb.auth.getSession();
-if(s.data&&s.data.session){afterLogin(s.data.session.user)}else if(WACHTLIJST||location.hash==="#wachtlijst")waitlist();else auth()}
+if(s.data&&s.data.session){afterLogin(s.data.session.user)}else if(WACHTLIJST||wlLink())waitlist();else auth()}
+function wlLink(){return /wachtlijst/i.test(location.hash+location.search)}
+window.addEventListener("hashchange",function(){if(wlLink()&&sb)sb.auth.getSession().then(function(s){if(!(s.data&&s.data.session))waitlist()})});
 start();
 </script>
 </body>
