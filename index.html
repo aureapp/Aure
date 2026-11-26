@@ -154,6 +154,10 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .ins{display:flex;gap:12px;align-items:center;margin:8px 0 4px;padding:12px 12px 12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--card);font-size:13px;line-height:1.4}
 .ins img{width:40px;height:40px;border-radius:10px;flex:none}
 .ins .x{margin-left:auto;flex:none;width:36px;height:36px;border:0;background:none;color:var(--mut);font-size:18px;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.chip{font:inherit;font-size:13px;padding:7px 12px;border-radius:99px;border:1px solid var(--line);color:var(--ink);background:none}
+button.chip{cursor:pointer}.chip.on{border-color:var(--gold);background:rgba(201,169,110,.16);color:var(--vg)}
+.bio{font-size:14px;line-height:1.5;margin:10px auto 0;max-width:320px;white-space:pre-line}
 .wd{display:flex;justify-content:center;gap:8px;margin:18px 0 4px}
 .wd i{width:7px;height:7px;border-radius:50%;background:var(--line)}.wd i.on{background:var(--gold);width:22px;border-radius:99px}
 .wsi{width:54px;height:54px;border-radius:50%;margin:0 auto 14px;border:1px solid var(--gold);display:grid;place-items:center;color:var(--gold);background:rgba(201,169,110,.09)}
@@ -249,11 +253,16 @@ var i=await sb.from("profiles").insert({id:user.id,username:un}).select().single
 if(i.data){gate(i.data,user)}else say(i.error&&i.error.code==="23505"?"Deze gebruikersnaam is al bezet.":"Opslaan lukt niet.")}}
 
 function qa(t){return esc(t).replace(/"/g,"&quot;")}
+var INTER=["Uitgaan","Muziek","Festivals","Dansen","Mode","Beauty","Fitness","Sport","Reizen","Eten & drinken","Films & series","Gaming","Ondernemen","Kunst","Fotografie","Lezen"];
+function bioHtml(u,me){var h="";if(u.bio)h+='<p class="bio">'+esc(u.bio)+'</p>';var it=u.interests||[];
+if(it.length){var mine=(me&&me.interests)||[];h+='<div class="chips">'+it.map(function(x){return '<span class="chip'+(mine.indexOf(x)>-1?' on':'')+'">'+esc(x)+'</span>'}).join("")+'</div>';
+var sh=it.filter(function(x){return mine.indexOf(x)>-1});if(me&&sh.length)h+='<div class="small" style="margin-top:8px">Jullie delen '+sh.length+(sh.length===1?' interesse':' interesses')+'</div>'}
+return h}
 function cntLine(c){var f=c.followers||0,g=c.following||0;return '<b>'+f+'</b> '+(f===1?'volger':'volgers')+' · <b>'+g+'</b> volgend'}
 async function member(id,p,back){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Terug</button></div><div class="card c" id="mb"><div class="small">Laden…</div></div>';
 $("#bk").onclick=back;
-var pr=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation,plan").eq("id",id).maybeSingle();
+var pr=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation,plan,bio,interests").eq("id",id).maybeSingle();
 var box=$("#mb");
 if(!pr.data){box.innerHTML='<div class="small">Dit profiel is niet beschikbaar.</div>';return}
 var u=pr.data,v=u.verification==="verified",mine=id===p.id;
@@ -261,7 +270,7 @@ var cn=await sb.rpc("follow_counts",{uid:id}),c=cn.data||{followers:0,following:
 var isF=false;
 if(!mine){var fr=await sb.from("follows").select("followed").eq("followed",id).limit(1);isF=!!(fr.data&&fr.data.length)}
 var sub=[v?u.occupation:"",u.city].filter(Boolean).join(" · ");
-box.innerHTML='<div class="avatar'+rg(u)+'">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
+box.innerHTML='<div class="avatar'+rg(u)+'">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(u,mine?null:p)+'<div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
 +(mine?'':'<button class="btn'+(isF?' ghost':'')+'" id="fo">'+(isF?'Volgend':'Volgen')+'</button><button class="btn ghost" id="mdm" style="margin-top:8px">Bericht</button><div class="small" id="mdh" style="margin-top:8px" hidden>Alleen Diamond en verified leden kunnen een gesprek beginnen. Antwoorden kan iedereen.</div><div id="msg"></div>');
 if(!mine){$("#mdm").onclick=async function(){
 if(master(p)){dmChat(p,u,function(){member(id,p,back)});return}
@@ -297,7 +306,7 @@ o.querySelector("#oc").onclick=function(){o.remove()};document.body.appendChild(
 
 function profile(p,note){
 var v=p.verification==="verified",sub=[v?p.occupation:"",p.city].filter(Boolean).join(" · ");
-app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar'+rg(p)+'">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar'+rg(p)+'">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(p,null)+((!p.bio&&!(p.interests||[]).length)?'<div class="small" style="margin-top:8px">Vertel iets over jezelf: voeg een bio en interesses toe via Instellingen.</div>':'')+'<div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
 +(note?'<div class="msg ok c">'+esc(note)+'</div>':'')
 +'<button class="btn ghost" id="lm">Lidmaatschap</button><button class="btn ghost" id="st">Instellingen</button>';
 $("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)};$("#lm").onclick=function(){plans(p)};
@@ -387,19 +396,24 @@ if(i.error){this.disabled=false;say("Versturen lukt niet. Probeer het later opni
 box.innerHTML='<h3 style="margin:0 0 8px">Aanvraag verstuurd ✓</h3><div class="small">Bedankt! We nemen contact op met je management om dit te bevestigen.</div>'}}
 
 function settings(p){
-var v=p.verification==="verified";
+var v=p.verification==="verified",sel=(p.interests||[]).slice();
+var bioEdit='<label>Over jou</label><textarea id="bi" maxlength="160" rows="3" placeholder="Iets over jezelf, in een paar woorden" style="width:100%;padding:13px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;resize:none">'+esc(p.bio||"")+'</textarea><div class="small" id="bic" style="text-align:right">'+(p.bio||"").length+'/160</div>'
++'<label>Interesses <span class="small">(kies er maximaal 5)</span></label><div class="chips" id="ic" style="justify-content:flex-start">'+INTER.map(function(x,i){return '<button type="button" class="chip'+(sel.indexOf(x)>-1?' on':'')+'" data-x="'+i+'">'+esc(x)+'</button>'}).join("")+'</div>';
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="card c"><div class="avatar'+rg(p)+'" id="av">'+avh(p)+'</div><button class="back" id="ph">Foto wijzigen</button><input type="file" id="fi" accept="image/*" hidden></div>'
-+'<div class="card" style="margin-top:12px"><label style="margin-top:0">Gebruikersnaam</label><div style="font-size:16px;font-weight:600">@'+esc(p.username)+'</div><div class="small" style="margin-top:2px">Je gebruikersnaam is vast en kan niet worden gewijzigd.</div><label>Stad</label><input type="text" id="ct" maxlength="30" value="'+qa(p.city)+'" placeholder="bijv. Amsterdam">'
++'<div class="card" style="margin-top:12px"><label style="margin-top:0">Gebruikersnaam</label><div style="font-size:16px;font-weight:600">@'+esc(p.username)+'</div><div class="small" style="margin-top:2px">Je gebruikersnaam is vast en kan niet worden gewijzigd.</div><label>Stad</label><input type="text" id="ct" maxlength="30" value="'+qa(p.city)+'" placeholder="bijv. Amsterdam">'+bioEdit
 +(v?'<label>Wat je doet</label><input type="text" id="oc" maxlength="30" value="'+qa(p.occupation)+'" placeholder="bijv. presentatrice">':'<p class="small">Met een vinkje kun je hier tonen wat je doet.</p>')
 +'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div>'+(v?'':'<button class="btn ghost" id="vq">Verificatie aanvragen</button>')+'<button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button><div class="c" style="margin-top:14px"><button class="back" id="g1">Voorwaarden</button> · <button class="back" id="g2">Privacy</button></div><div class="c"><button class="back" id="dz" style="color:#c96a6a;font-weight:500">Account verwijderen</button></div>';
 $("#g1").onclick=function(){legal("terms")};$("#g2").onclick=function(){legal("privacy")};$("#dz").onclick=function(){delAcc(p)};
 $("#bk").onclick=function(){profile(p)};$("#bl").onclick=function(){blocked(p)};if(!v)$("#vq").onclick=function(){verifyReq(p)};
 $("#ph").onclick=function(){$("#fi").click()};
+$("#bi").oninput=function(){$("#bic").textContent=this.value.length+"/160"};
+document.querySelectorAll("#ic .chip").forEach(function(b){b.onclick=function(){var x=INTER[+b.dataset.x],k=sel.indexOf(x);
+if(k>-1){sel.splice(k,1);b.classList.remove("on")}else if(sel.length>=5){say("Kies maximaal 5 interesses.")}else{sel.push(x);b.classList.add("on")}}});
 $("#fi").onchange=async function(){var f=this.files[0];if(!f)return;say("Foto uploaden…",true);
 try{var url=await uploadAvatar(f,p.id);var u=await sb.from("profiles").update({avatar_url:url}).eq("id",p.id).select().single();
 if(u.data){p=u.data;$("#av").innerHTML=avh(p);say("✓ Foto opgeslagen",true)}else say("Opslaan lukt niet.")}catch(e){say("Foto uploaden lukt niet.")}};
 $("#sv").onclick=async function(){
-var d={city:$("#ct").value.trim()||null};if(v)d.occupation=($("#oc").value.trim())||null;
+var d={city:$("#ct").value.trim()||null,bio:$("#bi").value.trim().slice(0,160)||null,interests:sel};if(v)d.occupation=($("#oc").value.trim())||null;
 this.disabled=true;
 var u=await sb.from("profiles").update(d).eq("id",p.id).select().single();
 if(u.data){profile(u.data,"✓ Opgeslagen")}else{this.disabled=false;say("Opslaan lukt niet.")}};
