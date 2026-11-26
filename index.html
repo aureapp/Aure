@@ -117,6 +117,31 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .avatar.rg-gold{box-shadow:0 0 0 4px #e2c47a,0 0 26px rgba(230,190,90,.85)!important}
 .avatar.rg-dia{box-shadow:0 0 0 4px #a9cfe4,0 0 22px rgba(143,184,208,.75)!important}
 .av2.rg-gold,.av2.rg-dia,.mini.rg-gold,.mini.rg-dia{border-radius:50%}
+.tb{display:flex;align-items:center;justify-content:space-between;height:44px;margin:4px 0 2px}
+.tb .bm{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:20px;letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center}
+.tb .bm .logo{width:12px;height:12px;margin-right:9px}
+.ib{position:relative;width:44px;height:44px;border:0;background:none;color:var(--gold);display:grid;place-items:center;cursor:pointer;padding:0}
+.ib svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ib .nbd{position:absolute;top:5px;right:2px;margin:0;min-width:16px;height:16px;font-size:10px;padding:0 4px}
+.ib .mini{margin:0;width:32px;height:32px}
+.room.cp{margin-top:8px;padding:12px 16px 12px 20px;border-radius:18px}
+.room.cp:before{top:14px;bottom:14px}
+.room.cp .tx .small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avf{position:relative;overflow:hidden;margin-top:12px;border-radius:20px;border:1px solid color-mix(in srgb,var(--gold) 60%,transparent);background:radial-gradient(120% 120% at 100% 0%,rgba(201,169,110,.22),transparent 60%),linear-gradient(160deg,color-mix(in srgb,var(--gold) 12%,var(--card)),var(--card));padding:16px 16px 16px 18px;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.avf.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 10px 28px rgba(0,0,0,.18)}
+.avl{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--vg)}
+.pd{width:6px;height:6px;border-radius:50%;background:var(--vg);box-shadow:0 0 8px var(--vg);animation:pu 1.8s ease infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.35}}
+.avr{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.avt{font:italic 400 26px/1.1 Georgia,"Times New Roman",serif}
+.avr .small{margin-top:4px}
+.avb{flex:none;height:44px;padding:0 18px;border:0;border-radius:99px;background:var(--acc);color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.xrow{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}.xrow::-webkit-scrollbar{display:none}
+.xr{flex:none;width:148px;min-height:84px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(140deg,color-mix(in srgb,var(--t) 16%,transparent),transparent 70%),var(--card);color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.xr.ok{border-color:color-mix(in srgb,var(--t) 55%,transparent)}
+.xr b{font:italic 400 16px Georgia,"Times New Roman",serif}
+.xr .small{font-size:11px}
+.xr .cnt{margin:auto 0 0;padding:0}
 .wlh{font:italic 400 24px/1.25 Georgia,"Times New Roman",serif}
 .wlt{font-size:14px;line-height:1.55;color:var(--mut);margin:8px auto 0;max-width:300px}
 .wln{font:400 56px/1.05 Georgia,"Times New Roman",serif;color:var(--acc);margin:10px 0}
@@ -454,7 +479,7 @@ function setRoom(s){curRoom=s;if(appChan&&appSub)appChan.track({room:s})}
 function counts(){var st=appChan?appChan.presenceState():{},m={},n=0;
 Object.keys(st).forEach(function(k){n++;var ms=st[k],r=ms.length?ms[ms.length-1].room:null;if(r)m[r]=(m[r]||0)+1});appN=n;return m}
 function paint(){var m=counts();showOnline();
-document.querySelectorAll(".cnt").forEach(function(e){var n=m[e.id.slice(2)]||0;e.innerHTML=dot(n)+n+" online";e.style.fontWeight=n?"700":""});
+document.querySelectorAll(".cnt").forEach(function(e){var n=m[e.id.slice(2)]||0;e.innerHTML=n?dot(n)+n+" online":"";e.style.fontWeight=n?"700":""});
 var pc=document.getElementById("pc");if(pc&&curRoom)pc.innerHTML=dot(m[curRoom]||0)+(m[curRoom]||0)+" online"}
 function startPresence(p){if(appChan)return;
 appChan=sb.channel("presence-app",{config:{presence:{key:p.id}}});
@@ -479,11 +504,20 @@ var tm=r.opens?"open "+(r.days&&r.days.length?"op "+r.days.map(function(d){retur
 if(planOk(r,p))return "Gesloten, "+tm+".";
 var b=r.access==="vip"?"Alleen voor verified leden en Diamond":(r.access==="age30"?"Voor leden van 30 jaar en ouder":(r.access==="gold"?"Alleen voor Gold, Diamond en verified leden":(r.access==="diamond"?"Alleen voor Diamond en verified leden":"Vanaf "+r.access)));
 return b+(tm?", "+tm:"")+"."}
+var avT=null;
+function amsNow(){var f=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date()).split(":");return {d:amsDay(),m:+f[0]*60+ +f[1]}}
+function mins(t){t=hh(t);return +t.slice(0,2)*60+ +t.slice(3,5)}
+function untilOpen(r){var n=amsNow(),om=mins(r.opens);for(var k=0;k<8;k++){var d=((n.d-1+k)%7)+1;if(!r.days||!r.days.length||r.days.indexOf(d)>-1){var x=k*1440+om-n.m;if(x>0)return x}}return null}
+function fmtUntil(m){var d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;return d?d+" d "+h+" u":(h?h+" u "+mi+" min":mi+" min")}
+function shortNeed(r,p){if(planOk(r,p))return r.opens?hh(r.opens)+" – "+hh(r.closes):"Gesloten";
+return r.access==="vip"?"Diamond en verified":(r.access==="age30"?"Vanaf 30 jaar":(r.access==="gold"?"Gold en hoger":(r.access==="diamond"?"Diamond en hoger":"Vanaf "+r.access)))}
+var LOCKI='<svg viewBox="0 0 24 24" width="11" height="11" style="vertical-align:-1px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2" aria-hidden="true"><path d="M6 11V8a6 6 0 0112 0v3M5 11h14v10H5z"/></svg>';
 async function home(p){
 leave();startPresence(p);startNotifs(p);setRoom(null);
-var v=p.verification==="verified";
-app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini'+rg(p)+'">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><input type="text" id="sq" placeholder="🔍 Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin-bottom:10px"><button class="btn ghost" id="dmb" style="margin:0 0 12px">Berichten <i class="nbd" id="b-dm" hidden></i></button><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
+app.innerHTML='<div class="tb"><div class="bm"><span class="logo"></span>Auré</div><div style="display:flex;align-items:center;gap:2px"><button class="ib" id="sqb" aria-label="Zoek leden"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button><button class="ib" id="dmb" aria-label="Berichten"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><i class="nbd" id="b-dm" hidden></i></button><button class="ib" id="pf" aria-label="Mijn profiel"><span class="mini'+rg(p)+'">'+avh(p)+'</span></button></div></div>'
++'<div class="small" id="ao" style="margin:0 2px 4px"></div><input type="text" id="sq" placeholder="Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin:6px 0 10px" hidden><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
 $("#pf").onclick=function(){profile(p)};$("#dmb").onclick=function(){dmList(p)};paint();
+$("#sqb").onclick=function(){var q=$("#sq");q.hidden=!q.hidden;if(!q.hidden)q.focus();else{q.value="";$("#sr").innerHTML=""}};
 var st=null,qn=0;
 $("#sq").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20);var q=this.value;clearTimeout(st);var box=$("#sr");
 if(q.length<2){box.innerHTML="";return}
@@ -500,18 +534,25 @@ box.querySelectorAll("[data-i]").forEach(function(b){b.onclick=function(){member
 var g=await sb.from("rooms").select("*").order("sort");
 if(g.error||!g.data){$("#rl").textContent="Chatrooms laden lukt niet.";return}
 g.data=g.data.filter(function(r){return !r.hidden});roomsC=g.data;
-var IC={randstad:"M3 20V10h4v10M9 20V4h5v16M16 20v-8h5v8M2 20h20",zuid:"M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1","noord-oost":"M3 9c3-3 5 3 9 0s6 3 9 0M3 15c3-3 5 3 9 0s6 3 9 0",nightlife:"M9 18V6l11-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM20 16a3 3 0 11-6 0 3 3 0 016 0z",creators:"M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 100-8 4 4 0 000 8z",gold:"M3 18L2 7l6 5 4-7 4 7 6-5-1 11zM3 21h18",latenight:"M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",vip:"M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 6 3-6M12 21L9 9M12 21l3-12"};
-var LOCK="M6 11V8a6 6 0 0112 0v3M5 11h14v10H5z";
-function icon(slug,lock){return '<span class="ico"><svg viewBox="0 0 24 24"><path d="'+(lock?LOCK:(IC[slug]||"M12 3a9 9 0 100 18 9 9 0 000-18z"))+'"/></svg></span>'}
-var SECT=[["Live",["avond"]],["Regio\u2019s",["randstad","zuid","noord-oost"]],["Thema",["nightlife","creators"]],["Exclusief",["gold","goldclub","latenight","vip"]]];
-var used={},h="";
 var TONE={avond:"#c9a96e",randstad:"#b07a70",zuid:"#c9a96e","noord-oost":"#8fa3a8",nightlife:"#8a5f86",creators:"#b98d6c",gold:"#b8a98c",goldclub:"#d6b565",latenight:"#5a5f8f",vip:"#e8d4a8"};
-function card(r,i){var ok=can(r,p);used[r.slug]=1;
-return '<button class="room'+(r.access==="vip"||r.slug==="avond"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'" style="--t:'+(TONE[r.slug]||"#c9a96e")+'"><span class="tx"><b>'+esc(r.name)+'<i class="nbd" id="b-'+r.slug+'" hidden></i></b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">'+dot(0)+'0 online</span></button>'}
-SECT.forEach(function(sc){var rows=[];g.data.forEach(function(r,i){if(sc[1].indexOf(r.slug)>-1)rows.push(card(r,i))});if(rows.length)h+='<div class="sec">'+sc[0]+'</div>'+rows.join("")});
-var rest=[];g.data.forEach(function(r,i){if(!used[r.slug])rest.push(card(r,i))});if(rest.length)h+='<div class="sec">Meer</div>'+rest.join("");
+function card(r,i){var ok=can(r,p);
+return '<button class="room cp'+(ok?'':' lock')+'" data-i="'+i+'" style="--t:'+(TONE[r.slug]||"#c9a96e")+'"><span class="tx"><b>'+esc(r.name)+'<i class="nbd" id="b-'+r.slug+'" hidden></i></b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'"></span></button>'}
+function xcard(r,i){var ok=can(r,p);
+return '<button class="xr'+(ok?' ok':'')+'" data-i="'+i+'" style="--t:'+(TONE[r.slug]||"#c9a96e")+'"><b>'+esc(r.name)+'<i class="nbd" id="b-'+r.slug+'" hidden></i></b><span class="small">'+(ok?'':LOCKI)+esc(ok?(r.opens?hh(r.opens)+" – "+hh(r.closes):"Open voor jou"):shortNeed(r,p))+'</span><span class="cnt" id="c-'+r.slug+'"></span></button>'}
+var EXC=["latenight","gold","goldclub","vip"],av=null,reg=[],ex=[],h="";
+g.data.forEach(function(r,i){if(r.slug==="avond")av=i;else if(EXC.indexOf(r.slug)>-1)ex.push(i);else reg.push(i)});
+if(av!==null)h+='<div id="avc"></div>';
+if(reg.length)h+='<div class="sec">Kamers</div>'+reg.map(function(i){return card(g.data[i],i)}).join("");
+ex.sort(function(x,y){return EXC.indexOf(g.data[x].slug)-EXC.indexOf(g.data[y].slug)});
+if(ex.length)h+='<div class="sec" style="display:flex;justify-content:space-between"><span>Exclusief</span><span style="letter-spacing:.04em;text-transform:none">Swipe →</span></div><div class="xrow">'+ex.map(function(i){return xcard(g.data[i],i)}).join("")+'</div>';
 $("#rl").className="";$("#rl").innerHTML=h;
-document.querySelectorAll(".room").forEach(function(b){b.onclick=function(){room(g.data[+b.dataset.i],p)}});
+document.querySelectorAll(".room[data-i],.xr[data-i]").forEach(function(b){b.onclick=function(){room(g.data[+b.dataset.i],p)}});
+function avRender(){var el=document.getElementById("avc");if(!el)return;var r=g.data[av],op=isOpen(r),n=amsNow(),u=r.opens?untilOpen(r):null;
+var today=(!r.days||!r.days.length||r.days.indexOf(n.d)>-1)&&r.opens&&n.m<mins(r.opens);
+var lab=op?"Nu live":(today?"Vanavond":(r.days&&r.days.length===1?DAYN[r.days[0]]:"Binnenkort"))+" · live";
+el.innerHTML='<div class="avf'+(op?' on':'')+'"><div class="avl"><span class="pd"></span>'+esc(lab)+'</div><div class="avr"><div style="min-width:0"><div class="avt">'+esc(r.name)+'</div><div class="small">'+(r.opens?hh(r.opens)+' – '+hh(r.closes)+' · ':'')+(op?'nu bezig <span class="cnt" id="c-avond" style="display:inline;margin:0;padding:0"></span>':(u!=null?'begint over <b style="color:var(--ink)">'+fmtUntil(u)+'</b>':''))+'</div></div>'+(op?'<button class="avb" id="avg">Ga naar binnen</button>':'')+'</div></div>';
+if(op)$("#avg").onclick=function(){room(r,p)};paint();paintBadges()}
+if(av!==null){avRender();clearInterval(avT);avT=setInterval(function(){if(!document.getElementById("avc")){clearInterval(avT);return}avRender()},30000)}
 paint();paintBadges()}
 
 async function room(r,p){
