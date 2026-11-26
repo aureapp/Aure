@@ -100,6 +100,21 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .sug[hidden]{display:none}
 .sg{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .sg+.sg{border-top:1px solid var(--line)}.sg:active{background:var(--other)}.sg .small{margin-left:auto}
+.pc{position:relative;overflow:hidden;margin-top:12px;padding:20px 18px 18px 24px;border-radius:20px;border:1px solid var(--line);background:linear-gradient(110deg,color-mix(in srgb,var(--t) 14%,transparent),transparent 72%),var(--card)}
+.pc:before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;background:var(--t)}
+.pc.me{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.pc h3{margin:0;font:italic 400 21px Georgia,"Times New Roman",serif;display:flex;align-items:center;gap:10px}
+.pc .pr{font-size:13px;color:var(--mut);margin:2px 0 10px}
+.pc ul{list-style:none;margin:0;padding:0}
+.pc li{display:flex;gap:10px;align-items:baseline;font-size:14px;margin:7px 0;line-height:1.35}
+.pc li:before{content:"✓";color:var(--vg);font-size:12px;flex:none}
+.pc li.soon{color:var(--mut)}
+.tg2{font:600 10px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--gold);color:var(--vg);border-radius:99px;padding:3px 8px;font-style:normal}
+.pc li .tg2{margin-left:auto;flex:none}
+.avatar{box-shadow:0 0 0 2px var(--line)}
+.rg-gold{box-shadow:0 0 0 2px var(--gold)!important}
+.rg-dia{box-shadow:0 0 0 2px #a9cfe4,0 0 12px rgba(143,184,208,.65)!important}
+.av2.rg-gold,.av2.rg-dia,.mini.rg-gold,.mini.rg-dia{border-radius:50%}
 .send{display:flex;gap:8px;margin-top:10px}.send input{flex:1}.send button{width:auto;margin:0;padding:0 20px}
 </style>
 </head>
@@ -190,7 +205,7 @@ function cntLine(c){var f=c.followers||0,g=c.following||0;return '<b>'+f+'</b> '
 async function member(id,p,back){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Terug</button></div><div class="card c" id="mb"><div class="small">Laden…</div></div>';
 $("#bk").onclick=back;
-var pr=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation").eq("id",id).maybeSingle();
+var pr=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation,plan").eq("id",id).maybeSingle();
 var box=$("#mb");
 if(!pr.data){box.innerHTML='<div class="small">Dit profiel is niet beschikbaar.</div>';return}
 var u=pr.data,v=u.verification==="verified",mine=id===p.id;
@@ -198,7 +213,7 @@ var cn=await sb.rpc("follow_counts",{uid:id}),c=cn.data||{followers:0,following:
 var isF=false;
 if(!mine){var fr=await sb.from("follows").select("followed").eq("followed",id).limit(1);isF=!!(fr.data&&fr.data.length)}
 var sub=[v?u.occupation:"",u.city].filter(Boolean).join(" · ");
-box.innerHTML='<div class="avatar">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
+box.innerHTML='<div class="avatar'+rg(u)+'">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
 +(mine?'':'<button class="btn'+(isF?' ghost':'')+'" id="fo">'+(isF?'Volgend':'Volgen')+'</button><div id="msg"></div>');
 if(!mine){$("#fo").onclick=async function(){
 this.disabled=true;
@@ -207,12 +222,33 @@ if(e.error&&e.error.code!=="23505"){this.disabled=false;say("Dat lukt niet. Prob
 isF=!isF;c.followers=Math.max(0,(c.followers||0)+(isF?1:-1));
 this.disabled=false;this.className="btn"+(isF?" ghost":"");this.textContent=isF?"Volgend":"Volgen";$("#fc").innerHTML=cntLine(c)}}}
 
+var PRICE={gold:"",diamond:""};
+var PINFO=[
+{id:"bronze",name:"Bronze",t:"#a8793f",items:[["De vijf openbare kamers (en de 30+ Lounge vanaf 30 jaar)",0],["Chatten, volgen en leden zoeken",0],["Berichten melden en leden blokkeren",0],["Antwoorden op privéberichten",1]]},
+{id:"gold",name:"Gold",t:"#d6b565",items:[["Alles van Bronze",0],["Toegang tot The Gold Club",0],["Gouden rand om je profielfoto",0],["Een paar privégesprekken per dag beginnen",1],["Je video\u2019s kunnen worden uitgelicht",1]]},
+{id:"diamond",name:"Diamond",t:"#8fb8d0",items:[["Alles van Gold",0],["IJsblauwe diamantrand om je profielfoto",0],["Toegang tot Late Night en de VIP Lounge",0],["Onbeperkt privégesprekken beginnen",1],["Meer bereik voor je video\u2019s",1]]}];
+function plans(p){
+var v=p.verification==="verified",rank=PLANS.indexOf(p.plan);
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="c" style="margin:4px 0 6px"><i style="font:italic 400 22px Georgia,serif">Lidmaatschap</i></div>'
++(v?'<div class="card c small" style="margin-top:8px">Als geverifieerd lid heb je toegang tot alle kamers. Je hoeft niets te kopen.</div>':'')
++PINFO.map(function(x,i){var mine=!v&&p.plan===x.id,up=i>rank;
+var pr=x.id==="bronze"?"Gratis":(PRICE[x.id]||"Prijs volgt")+(PRICE[x.id]?" per maand":"");
+return '<div class="pc'+(mine?' me':'')+'" style="--t:'+x.t+'"><h3>'+x.name+(mine?'<span class="tg2">Jouw plan</span>':'')+'</h3><div class="pr">'+esc(pr)+'</div><ul>'
++x.items.map(function(it){return '<li'+(it[1]?' class="soon"':'')+'><span>'+esc(it[0])+'</span>'+(it[1]?'<span class="tg2">Binnenkort</span>':'')+'</li>'}).join("")+'</ul>'
++(!v&&up?'<button class="btn" data-up="'+x.id+'">Upgraden naar '+x.name+'</button>':'')+'</div>'}).join("")
++'<div class="small c" style="margin:16px 0 4px">Betalen is nog niet beschikbaar.</div>';
+$("#bk").onclick=function(){profile(p)};
+document.querySelectorAll("[data-up]").forEach(function(b){b.onclick=function(){
+var o=document.createElement("div");o.className="ov";
+o.innerHTML='<div class="sheet c"><b>'+esc(PINFO.filter(function(x){return x.id===b.dataset.up})[0].name)+' komt binnenkort</b><p class="small">Betalen kan nog niet. We laten het weten zodra je kunt upgraden.</p><button class="btn" id="oc">Sluiten</button></div>';
+o.querySelector("#oc").onclick=function(){o.remove()};document.body.appendChild(o)}})}
+
 function profile(p,note){
 var v=p.verification==="verified",sub=[v?p.occupation:"",p.city].filter(Boolean).join(" · ");
-app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar'+rg(p)+'">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
 +(note?'<div class="msg ok c">'+esc(note)+'</div>':'')
-+'<button class="btn ghost" id="st">Instellingen</button>';
-$("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)};
++'<button class="btn ghost" id="lm">Lidmaatschap</button><button class="btn ghost" id="st">Instellingen</button>';
+$("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)};$("#lm").onclick=function(){plans(p)};
 sb.rpc("follow_counts",{uid:p.id}).then(function(r){var el=document.getElementById("fcc");if(el&&r.data)el.innerHTML=cntLine(r.data)})}
 
 async function blocked(p){
@@ -299,7 +335,7 @@ box.innerHTML='<h3 style="margin:0 0 8px">Aanvraag verstuurd ✓</h3><div class=
 
 function settings(p){
 var v=p.verification==="verified";
-app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="card c"><div class="avatar" id="av">'+avh(p)+'</div><button class="back" id="ph">Foto wijzigen</button><input type="file" id="fi" accept="image/*" hidden></div>'
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="card c"><div class="avatar'+rg(p)+'" id="av">'+avh(p)+'</div><button class="back" id="ph">Foto wijzigen</button><input type="file" id="fi" accept="image/*" hidden></div>'
 +'<div class="card" style="margin-top:12px"><label style="margin-top:0">Gebruikersnaam</label><div style="font-size:16px;font-weight:600">@'+esc(p.username)+'</div><div class="small" style="margin-top:2px">Je gebruikersnaam is vast en kan niet worden gewijzigd.</div><label>Stad</label><input type="text" id="ct" maxlength="30" value="'+qa(p.city)+'" placeholder="bijv. Amsterdam">'
 +(v?'<label>Wat je doet</label><input type="text" id="oc" maxlength="30" value="'+qa(p.occupation)+'" placeholder="bijv. presentatrice">':'<p class="small">Met een vinkje kun je hier tonen wat je doet.</p>')
 +'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div>'+(v?'':'<button class="btn ghost" id="vq">Verificatie aanvragen</button>')+'<button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button><div class="c" style="margin-top:14px"><button class="back" id="g1">Voorwaarden</button> · <button class="back" id="g2">Privacy</button></div><div class="c"><button class="back" id="dz" style="color:#c96a6a;font-weight:500">Account verwijderen</button></div>';
@@ -317,6 +353,7 @@ if(u.data){profile(u.data,"✓ Opgeslagen")}else{this.disabled=false;say("Opslaa
 $("#lo").onclick=async function(){stopNotifs();if(appChan){sb.removeChannel(appChan);appChan=null;appSub=false}await sb.auth.signOut();mode="login";auth()}}
 
 var nchan=null,unread={},roomsC=[];
+function rg(u){return u&&u.plan==='diamond'?' rg-dia':(u&&u.plan==='gold'?' rg-gold':'')}
 function paintBadges(){document.querySelectorAll(".nbd").forEach(function(e){var n=unread[e.id.slice(2)]||0;e.textContent=n;e.hidden=!n})}
 function banner(p,name,slug){
 var r=roomsC.filter(function(x){return x.slug===slug})[0];if(!r)return;
@@ -364,25 +401,25 @@ function can(r,p){return planOk(r,p)&&isOpen(r)}
 function need(r,p){
 var tm=r.opens?"open van "+hh(r.opens)+" tot "+hh(r.closes):"";
 if(planOk(r,p))return "Gesloten, "+tm+".";
-var b=r.access==="vip"?"Alleen voor verified leden en Diamond":(r.access==="age30"?"Voor leden van 30 jaar en ouder":"Vanaf "+r.access);
+var b=r.access==="vip"?"Alleen voor verified leden en Diamond":(r.access==="age30"?"Voor leden van 30 jaar en ouder":(r.access==="gold"?"Alleen voor Gold, Diamond en verified leden":(r.access==="diamond"?"Alleen voor Diamond en verified leden":"Vanaf "+r.access)));
 return b+(tm?", "+tm:"")+"."}
 async function home(p){
 leave();startPresence(p);startNotifs(p);setRoom(null);
 var v=p.verification==="verified";
-app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><input type="text" id="sq" placeholder="🔍 Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin-bottom:10px"><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
+app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini'+rg(p)+'">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><input type="text" id="sq" placeholder="🔍 Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin-bottom:10px"><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
 $("#pf").onclick=function(){profile(p)};paint();
 var st=null,qn=0;
 $("#sq").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20);var q=this.value;clearTimeout(st);var box=$("#sr");
 if(q.length<2){box.innerHTML="";return}
 st=setTimeout(async function(){var n=++qn;
-var g=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation").ilike("username","%"+q.replace(/_/g,"\\_")+"%").neq("id",p.id).limit(15);
+var g=await sb.from("profiles").select("id,username,verification,avatar_url,city,occupation,plan").ilike("username","%"+q.replace(/_/g,"\\_")+"%").neq("id",p.id).limit(15);
 if(n!==qn)return;
 var bl=await sb.from("blocks").select("blocked"),bs={};(bl.data||[]).forEach(function(x){bs[x.blocked]=1});
 var rows=(g.data||[]).filter(function(u){return !bs[u.id]});
 if(g.error){box.innerHTML='<div class="small c" style="margin-bottom:10px">Zoeken lukt niet.</div>';return}
 if(!rows.length){box.innerHTML='<div class="small c" style="margin-bottom:10px">Geen leden gevonden.</div>';return}
 box.innerHTML='<div class="card" style="padding:4px 14px;margin-bottom:12px">'+rows.map(function(u,i){var v=u.verification==="verified",sub=[v?u.occupation:"",u.city].filter(Boolean).join(" · ");
-return '<button class="back" data-i="'+i+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 0"><span class="mini">'+avh(u)+'</span><span><b>@'+esc(u.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+'<span class="small" style="display:block;font-weight:400">'+esc(sub)+'</span></span></button>'}).join("")+'</div>';
+return '<button class="back" data-i="'+i+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 0"><span class="mini'+rg(u)+'">'+avh(u)+'</span><span><b>@'+esc(u.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+'<span class="small" style="display:block;font-weight:400">'+esc(sub)+'</span></span></button>'}).join("")+'</div>';
 box.querySelectorAll("[data-i]").forEach(function(b){b.onclick=function(){member(rows[+b.dataset.i].id,p,function(){home(p)})}})},300)};
 var g=await sb.from("rooms").select("*").order("sort");
 if(g.error||!g.data){$("#rl").textContent="Chatrooms laden lukt niet.";return}
@@ -390,9 +427,9 @@ roomsC=g.data;
 var IC={randstad:"M3 20V10h4v10M9 20V4h5v16M16 20v-8h5v8M2 20h20",zuid:"M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1","noord-oost":"M3 9c3-3 5 3 9 0s6 3 9 0M3 15c3-3 5 3 9 0s6 3 9 0",nightlife:"M9 18V6l11-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM20 16a3 3 0 11-6 0 3 3 0 016 0z",creators:"M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 100-8 4 4 0 000 8z",gold:"M3 18L2 7l6 5 4-7 4 7 6-5-1 11zM3 21h18",latenight:"M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",vip:"M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 6 3-6M12 21L9 9M12 21l3-12"};
 var LOCK="M6 11V8a6 6 0 0112 0v3M5 11h14v10H5z";
 function icon(slug,lock){return '<span class="ico"><svg viewBox="0 0 24 24"><path d="'+(lock?LOCK:(IC[slug]||"M12 3a9 9 0 100 18 9 9 0 000-18z"))+'"/></svg></span>'}
-var SECT=[["Regio\u2019s",["randstad","zuid","noord-oost"]],["Thema",["nightlife","creators"]],["Exclusief",["gold","latenight","vip"]]];
+var SECT=[["Regio\u2019s",["randstad","zuid","noord-oost"]],["Thema",["nightlife","creators"]],["Exclusief",["gold","goldclub","latenight","vip"]]];
 var used={},h="";
-var TONE={randstad:"#b07a70",zuid:"#c9a96e","noord-oost":"#8fa3a8",nightlife:"#8a5f86",creators:"#b98d6c",gold:"#d6b565",latenight:"#5a5f8f",vip:"#e8d4a8"};
+var TONE={randstad:"#b07a70",zuid:"#c9a96e","noord-oost":"#8fa3a8",nightlife:"#8a5f86",creators:"#b98d6c",gold:"#b8a98c",goldclub:"#d6b565",latenight:"#5a5f8f",vip:"#e8d4a8"};
 function card(r,i){var ok=can(r,p);used[r.slug]=1;
 return '<button class="room'+(r.access==="vip"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'" style="--t:'+(TONE[r.slug]||"#c9a96e")+'"><span class="tx"><b>'+esc(r.name)+'<i class="nbd" id="b-'+r.slug+'" hidden></i></b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">'+dot(0)+'0 online</span></button>'}
 SECT.forEach(function(sc){var rows=[];g.data.forEach(function(r,i){if(sc[1].indexOf(r.slug)>-1)rows.push(card(r,i))});if(rows.length)h+='<div class="sec">'+sc[0]+'</div>'+rows.join("")});
@@ -409,7 +446,7 @@ app.innerHTML='<div class="brand" style="margin:10px 0 0;font-size:20px"><span c
 :'<div class="card c"><div style="font-size:30px">🔒</div><p><b>'+esc(r.name)+'</b></p><p class="small">'+esc(need(r,p))+'</p></div>');
 $("#bk").onclick=function(){home(p)};
 if(!ok)return;
-var box=$("#msgs"),seen={},SEL="id,body,created_at,user_id,profiles(username,verification,avatar_url)";
+var box=$("#msgs"),seen={},SEL="id,body,created_at,user_id,profiles(username,verification,avatar_url,plan)";
 var PAL=["#7fb6a4","#8fa8d6","#b59bd6","#d9807a","#a8c27a","#7fc0cf","#9aa0b8","#c4a1a1"];
 function colOf(id){var h=0;for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;return PAL[h%PAL.length]}
 var TF=new Intl.DateTimeFormat("nl-NL",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit"});
@@ -433,7 +470,7 @@ box.appendChild(g);lastG=g;lastSlot=null}
 else{g=lastG;var pf=g.querySelector(".row.f");if(pf)pf.classList.remove("f");if(lastSlot)lastSlot.innerHTML="";var ot=g.querySelector(".tm2");if(ot)ot.remove()}
 var row=document.createElement("div");row.className="row f"+((!me&&meRe.test(m.body))?" ment":"");
 var slot=null;
-if(!me){slot=document.createElement("span");slot.className="slot";slot.innerHTML='<span class="av2" style="--c:'+col+'">'+avh(pr)+'</span>';slot.onclick=prof;row.appendChild(slot)}
+if(!me){slot=document.createElement("span");slot.className="slot";slot.innerHTML='<span class="av2'+rg(pr)+'" style="--c:'+col+'">'+avh(pr)+'</span>';slot.onclick=prof;row.appendChild(slot)}
 var c=document.createElement("div");c.className="col";c.innerHTML='<div class="bb">'+fmt(m.body)+'</div>';row.appendChild(c);
 if(!me){var fb=document.createElement("button");fb.className="fl";fb.textContent="⋯";fb.setAttribute("aria-label","Melden of blokkeren");fb.onclick=function(){menu(m,pr)};row.appendChild(fb)}
 g.appendChild(row);
@@ -470,23 +507,23 @@ $("#sd").disabled=false;
 if(i.error){say("Versturen lukt niet.");return}
 $("#tx").value="";if(typeof hideSug==="function")hideSug();var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(i.data);$("#tx").focus()}
 $("#sd").onclick=send;
-sb.from("follows").select("followed,profiles!followed(username,verification,avatar_url)").then(function(x){fol=(x.data||[]).map(function(y){return y.profiles}).filter(Boolean)});
+sb.from("follows").select("followed,profiles!followed(username,verification,avatar_url,plan)").then(function(x){fol=(x.data||[]).map(function(y){return y.profiles}).filter(Boolean)});
 var sug=$("#sug"),tx=$("#tx"),cur=[],sq=0;
 function hideSug(){sug.hidden=true;sug.innerHTML="";cur=[]}
 function tok(){var v=tx.value,c=tx.selectionStart==null?v.length:tx.selectionStart,m=/(^|\s)@([A-Za-z0-9._]{0,20})$/.exec(v.slice(0,c));return m?{q:m[2].toLowerCase(),start:c-m[2].length-1,end:c}:null}
 function pick(u){var t=tok();if(!t)return;var v=tx.value;tx.value=v.slice(0,t.start)+"@"+u.username+" "+v.slice(t.end);var pos=t.start+u.username.length+2;try{tx.setSelectionRange(pos,pos)}catch(e){}hideSug();tx.focus()}
 function showSug(list){cur=list;if(!list.length){hideSug();return}
 sug.hidden=false;
-sug.innerHTML=list.map(function(u,i){return '<button type="button" class="sg" data-i="'+i+'"><span class="mini">'+avh(u)+'</span><b>@'+esc(u.username)+'</b>'+(u.verification==="verified"?'<span class="ck">✓</span>':'')+(u.tag?'<span class="small">'+esc(u.tag)+'</span>':'')+'</button>'}).join("");
+sug.innerHTML=list.map(function(u,i){return '<button type="button" class="sg" data-i="'+i+'"><span class="mini'+rg(u)+'">'+avh(u)+'</span><b>@'+esc(u.username)+'</b>'+(u.verification==="verified"?'<span class="ck">✓</span>':'')+(u.tag?'<span class="small">'+esc(u.tag)+'</span>':'')+'</button>'}).join("");
 sug.querySelectorAll(".sg").forEach(function(b){b.onpointerdown=function(e){e.preventDefault();pick(list[+b.dataset.i])}})}
 function match(q,extra){var out=[],seenN={};seenN[p.username.toLowerCase()]=1;
-function take(arr,tag){arr.forEach(function(u){var k=(u.username||"").toLowerCase();if(!k||seenN[k]||k.indexOf(q)<0)return;seenN[k]=1;out.push({username:u.username,verification:u.verification,avatar_url:u.avatar_url,tag:tag,pre:k.indexOf(q)===0?0:1})})}
+function take(arr,tag){arr.forEach(function(u){var k=(u.username||"").toLowerCase();if(!k||seenN[k]||k.indexOf(q)<0)return;seenN[k]=1;out.push({username:u.username,verification:u.verification,avatar_url:u.avatar_url,plan:u.plan,tag:tag,pre:k.indexOf(q)===0?0:1})})}
 take(fol,"volg je");take(Object.keys(known).map(function(k){return known[k]}),"in deze kamer");if(extra)take(extra,"");
 out.sort(function(a,b){return a.pre-b.pre});return out.slice(0,6)}
 tx.oninput=async function(){var t=tok();if(!t){hideSug();return}
 var l=match(t.q);showSug(l);
 if(t.q.length>=2&&l.length<6){var n=++sq;
-var g=await sb.from("profiles").select("username,verification,avatar_url").ilike("username",t.q.replace(/_/g,"\\_")+"%").neq("id",p.id).limit(6);
+var g=await sb.from("profiles").select("username,verification,avatar_url,plan").ilike("username",t.q.replace(/_/g,"\\_")+"%").neq("id",p.id).limit(6);
 if(n!==sq||!tok())return;showSug(match(t.q,g.data||[]))}};
 tx.onblur=function(){setTimeout(hideSug,200)};
 tx.onkeydown=function(e){
