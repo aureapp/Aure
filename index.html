@@ -83,7 +83,7 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .pill input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;font-size:16px;outline:0;padding:8px 0}
 .pill button{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:18px;cursor:pointer}
 .pill button:disabled{opacity:.5}
-#msgs{gap:0}.g{margin:7px 0}.g.me{text-align:right}
+#msgs{gap:0}.g{margin:7px 0}.joinl{text-align:center;font:italic 13px Georgia,serif;color:var(--mut);margin:10px 0;animation:fi .5s ease}.joinl span{color:#9c7545;font-style:normal}.g.me{text-align:right}
 .g .nm{font-size:12px;font-weight:600;margin:0 0 3px 40px;cursor:pointer;text-align:left}
 .g .row{display:flex;gap:8px;align-items:flex-end;margin-top:3px}
 .g.me .row{justify-content:flex-end}
@@ -354,7 +354,7 @@ var box=$("#bl");
 if(g.error){box.innerHTML='<div class="small c">Laden lukt niet.</div>';return}
 if(!g.data.length){box.innerHTML='<div class="small c">Je hebt niemand geblokkeerd.</div>';return}
 box.innerHTML=g.data.map(function(r){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0"><b>@'+esc((r.profiles||{}).username||"?")+'</b><button class="back" data-id="'+esc(r.blocked)+'">Deblokkeren</button></div>'}).join("");
-box.querySelectorAll("[data-id]").forEach(function(b){b.onclick=async function(){await sb.from("blocks").delete().eq("blocked",b.dataset.id);blocked(p)}})}
+box.querySelectorAll("[data-id]").forEach(function(b){b.onclick=async function(){await sb.from("blocks").delete().eq("blocked",b.dataset.id);delete blk[b.dataset.id];blocked(p)}})}
 
 var LEGAL_MAIL="";
 var LEGAL={
@@ -517,7 +517,7 @@ o.querySelectorAll("[data-r]").forEach(function(b){b.onclick=async function(){
 var i=await sb.from("reports").insert({reported:u.id,message_text:String(m.body).slice(0,500),room:"dm",reason:b.dataset.r});
 o.innerHTML='<div class="sheet c"><b>'+(i.error?"Melden lukt niet. Probeer het later opnieuw.":"Bedankt, we kijken ernaar.")+'</b></div>';setTimeout(close,1600)}})}
 async function blk(){
-var i=await sb.from("blocks").insert({blocked:u.id});
+var i=await sb.from("blocks").insert({blocked:u.id});blk[u.id]=1;
 if(i.error&&i.error.code!=="23505"){o.innerHTML='<div class="sheet c"><b>Blokkeren lukt niet.</b></div>';setTimeout(close,1600);return}
 o.innerHTML='<div class="sheet c"><b>@'+esc(u.username)+' is geblokkeerd.</b><p class="small">Je ziet dit gesprek niet meer. Je kunt dit terugdraaien via Instellingen.</p></div>';setTimeout(function(){close();dmList(p)},1900)}
 main();document.body.appendChild(o)}
@@ -541,17 +541,23 @@ var PLANS=["bronze","gold","diamond"],chan=null,pchan=null,homeChans=[],appChan=
 function dot(n){return '<span class="dot'+(n?' on':'')+'">●</span> '}
 function showOnline(){var e=document.getElementById("ao");if(e)e.innerHTML=dot(appN)+appN+(appN===1?" lid online":" leden online")}
 var curRoom=null,appSub=false;
-function setRoom(s){curRoom=s;if(appChan&&appSub)appChan.track({room:s})}
+var meName="",meId="",prevRoom={},presInit=false,presSynced=false,lastAnn={},roomJoin=null,blk={};
+function setRoom(s){curRoom=s;if(appChan&&appSub)appChan.track({room:s,u:meName})}
+function joins(){if(!presSynced)return;var st=appChan?appChan.presenceState():{},now=Date.now(),cur={};
+Object.keys(st).forEach(function(k){var ms=st[k],x=ms.length?ms[ms.length-1]:{};cur[k]=x;
+if(presInit&&k!==meId&&curRoom&&x.room===curRoom&&(prevRoom[k]||{}).room!==curRoom&&x.u&&!blk[k]&&roomJoin){var key=k+"|"+curRoom;if(!lastAnn[key]||now-lastAnn[key]>600000){lastAnn[key]=now;roomJoin(x.u)}}});
+prevRoom=cur;presInit=true}
 function counts(){var st=appChan?appChan.presenceState():{},m={},n=0;
 Object.keys(st).forEach(function(k){n++;var ms=st[k],r=ms.length?ms[ms.length-1].room:null;if(r)m[r]=(m[r]||0)+1});appN=n;return m}
-function paint(){var m=counts();showOnline();
+function paint(){joins();var m=counts();showOnline();
 document.querySelectorAll(".cnt").forEach(function(e){var n=m[e.id.slice(2)]||0;e.innerHTML=n?dot(n)+n+" online":"";e.style.fontWeight=n?"700":""});
 var pc=document.getElementById("pc");if(pc&&curRoom)pc.innerHTML=dot(m[curRoom]||0)+(m[curRoom]||0)+" online"}
 function startPresence(p){if(appChan)return;
+meName=p.username;meId=p.id;sb.from("blocks").select("blocked").then(function(q){(q.data||[]).forEach(function(b){blk[b.blocked]=1})});
 appChan=sb.channel("presence-app",{config:{presence:{key:p.id}}});
-appChan.on("presence",{event:"sync"},paint).subscribe(async function(st){if(st==="SUBSCRIBED"){appSub=true;await appChan.track({room:curRoom})}})}
+appChan.on("presence",{event:"sync"},function(){presSynced=true;paint()}).subscribe(async function(st){if(st==="SUBSCRIBED"){appSub=true;await appChan.track({room:curRoom,u:meName})}})}
 var dchan=null,curDm=null;
-function leave(){if(chan){sb.removeChannel(chan);chan=null}if(dchan){sb.removeChannel(dchan);dchan=null}curDm=null}
+function leave(){roomJoin=null;if(chan){sb.removeChannel(chan);chan=null}if(dchan){sb.removeChannel(dchan);dchan=null}curDm=null}
 function master(p){return p.verification==="verified"||p.plan==="diamond"}
 function planOk(r,p){
 if(master(p)||r.access==="free")return true;
@@ -701,7 +707,7 @@ o.querySelectorAll("[data-r]").forEach(function(b){b.onclick=async function(){
 var i=await sb.from("reports").insert({reported:m.user_id,message_id:m.id,message_text:String(m.body).slice(0,500),room:r.slug,reason:b.dataset.r});
 o.innerHTML='<div class="sheet c"><b>'+(i.error?"Melden lukt niet. Probeer het later opnieuw.":"Bedankt, we kijken ernaar.")+'</b></div>';setTimeout(close,1600)}})}
 async function blk(){
-var i=await sb.from("blocks").insert({blocked:m.user_id});
+var i=await sb.from("blocks").insert({blocked:m.user_id});blk[m.user_id]=1;
 if(i.error&&i.error.code!=="23505"){o.innerHTML='<div class="sheet c"><b>Blokkeren lukt niet.</b></div>';setTimeout(close,1600);return}
 box.querySelectorAll('[data-uid="'+m.user_id+'"]').forEach(function(e){e.remove()});
 o.innerHTML='<div class="sheet c"><b>@'+esc(pr.username||"?")+' is geblokkeerd.</b><p class="small">Je ziet geen berichten meer van dit lid. Je kunt dit terugdraaien via Instellingen.</p></div>';setTimeout(close,1900)}
@@ -711,6 +717,7 @@ if(g.data){g.data.reverse().forEach(add)}
 if(!box.children.length)box.innerHTML='<div class="small c" style="margin:auto">Nog geen berichten. Zeg als eerste hallo!</div>';
 chan=sb.channel("room-"+r.slug).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"room=eq."+r.slug},async function(e){
 var q=await sb.from("messages").select(SEL).eq("id",e.new.id).single();if(q.data){var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(q.data)}}).subscribe();
+roomJoin=function(u){var f=box.querySelector(".small.c");if(f)box.innerHTML="";var was=near(),d=document.createElement("div");d.className="joinl";d.innerHTML='<span>@'+esc(u)+'</span> is net binnen';box.appendChild(d);lastG=null;if(was)box.scrollTop=box.scrollHeight};
 setRoom(r.slug);paint();if(r.slug==="avond")sb.rpc("avond_inchecken").then(function(){});
 if(unread[r.slug]){unread[r.slug]=0;sb.from("notifications").update({read:true}).eq("room",r.slug).eq("read",false).then(function(){})}
 async function send(){var t=$("#tx").value.trim();if(!t)return;$("#sd").disabled=true;
