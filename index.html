@@ -96,6 +96,10 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 @keyframes bi{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
 .nbd{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:99px;background:#c0534b;color:#fff;font:600 11px system-ui,sans-serif;padding:0 6px;margin-left:10px;box-shadow:0 1px 4px rgba(0,0,0,.25);vertical-align:middle;font-style:normal;letter-spacing:0}
 .nbd[hidden]{display:none}
+.sug{position:absolute;left:0;right:0;bottom:calc(100% + 6px);background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.3);overflow:hidden;z-index:6}
+.sug[hidden]{display:none}
+.sg{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.sg+.sg{border-top:1px solid var(--line)}.sg:active{background:var(--other)}.sg .small{margin-left:auto}
 .send{display:flex;gap:8px;margin-top:10px}.send input{flex:1}.send button{width:auto;margin:0;padding:0 20px}
 </style>
 </head>
@@ -401,7 +405,7 @@ async function room(r,p){
 leave();
 var ok=can(r,p);
 app.innerHTML='<div class="brand" style="margin:10px 0 0;font-size:20px"><span class="logo"></span>Auré</div><div class="hd"><button class="back" id="bk" aria-label="Terug naar chatrooms" style="font-size:20px;padding:6px 12px 6px 0">←</button><div class="t"><i>'+esc(r.name)+'</i><span class="small" id="pc"></span></div><span class="sp"></span></div>'
-+(ok?'<div class="card" style="padding:0;position:relative"><div id="msgs"></div><button class="nb" id="nb" hidden>↓ Nieuwe berichten</button></div><div class="pill"><input type="text" id="tx" maxlength="500" placeholder="Schrijf een bericht…" autocomplete="off"><button id="sd" aria-label="Versturen">↑</button></div><div id="msg"></div>'
++(ok?'<div class="card" style="padding:0;position:relative"><div id="msgs"></div><button class="nb" id="nb" hidden>↓ Nieuwe berichten</button></div><div style="position:relative"><div class="sug" id="sug" hidden></div><div class="pill"><input type="text" id="tx" maxlength="500" placeholder="Schrijf een bericht…" autocomplete="off"><button id="sd" aria-label="Versturen">↑</button></div></div><div id="msg"></div>'
 :'<div class="card c"><div style="font-size:30px">🔒</div><p><b>'+esc(r.name)+'</b></p><p class="small">'+esc(need(r,p))+'</p></div>');
 $("#bk").onclick=function(){home(p)};
 if(!ok)return;
@@ -411,13 +415,14 @@ function colOf(id){var h=0;for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))
 var TF=new Intl.DateTimeFormat("nl-NL",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit"});
 function fmt(b){return esc(b).replace(/@[a-z0-9._]{3,20}/gi,function(x){return '<b class="mn">'+x+'</b>'})}
 var meRe=new RegExp("@"+p.username.replace(/\./g,"\\.")+"(?![a-z0-9_]|\\.[a-z0-9_])","i");
-var lastG=null,lastU=null,lastT=0,lastSlot=null;
+var lastG=null,lastU=null,lastT=0,lastSlot=null,known={},fol=[];
 var nb=$("#nb");
 function near(){return box.scrollHeight-box.scrollTop-box.clientHeight<90}
 box.onscroll=function(){if(near())nb.hidden=true};
 nb.onclick=function(){box.scrollTop=box.scrollHeight;nb.hidden=true};
 function add(m){if(!m||seen[m.id])return;seen[m.id]=1;
 var me=m.user_id===p.id,pr=m.profiles||{},v=pr.verification==="verified",col=colOf(m.user_id),was=near();
+if(pr.username)known[pr.username.toLowerCase()]=pr;
 var t=new Date(m.created_at).getTime(),g;
 var fresh=!lastG||!box.contains(lastG)||lastU!==m.user_id||(t-lastT)>300000;
 function prof(){member(m.user_id,p,function(){room(r,p)})}
@@ -463,8 +468,30 @@ async function send(){var t=$("#tx").value.trim();if(!t)return;$("#sd").disabled
 var i=await sb.from("messages").insert({room:r.slug,body:t}).select(SEL).single();
 $("#sd").disabled=false;
 if(i.error){say("Versturen lukt niet.");return}
-$("#tx").value="";var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(i.data);$("#tx").focus()}
-$("#sd").onclick=send;$("#tx").onkeydown=function(e){if(e.key==="Enter")send()}}
+$("#tx").value="";if(typeof hideSug==="function")hideSug();var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(i.data);$("#tx").focus()}
+$("#sd").onclick=send;
+sb.from("follows").select("followed,profiles!followed(username,verification,avatar_url)").then(function(x){fol=(x.data||[]).map(function(y){return y.profiles}).filter(Boolean)});
+var sug=$("#sug"),tx=$("#tx"),cur=[],sq=0;
+function hideSug(){sug.hidden=true;sug.innerHTML="";cur=[]}
+function tok(){var v=tx.value,c=tx.selectionStart==null?v.length:tx.selectionStart,m=/(^|\s)@([A-Za-z0-9._]{0,20})$/.exec(v.slice(0,c));return m?{q:m[2].toLowerCase(),start:c-m[2].length-1,end:c}:null}
+function pick(u){var t=tok();if(!t)return;var v=tx.value;tx.value=v.slice(0,t.start)+"@"+u.username+" "+v.slice(t.end);var pos=t.start+u.username.length+2;try{tx.setSelectionRange(pos,pos)}catch(e){}hideSug();tx.focus()}
+function showSug(list){cur=list;if(!list.length){hideSug();return}
+sug.hidden=false;
+sug.innerHTML=list.map(function(u,i){return '<button type="button" class="sg" data-i="'+i+'"><span class="mini">'+avh(u)+'</span><b>@'+esc(u.username)+'</b>'+(u.verification==="verified"?'<span class="ck">✓</span>':'')+(u.tag?'<span class="small">'+esc(u.tag)+'</span>':'')+'</button>'}).join("");
+sug.querySelectorAll(".sg").forEach(function(b){b.onpointerdown=function(e){e.preventDefault();pick(list[+b.dataset.i])}})}
+function match(q,extra){var out=[],seenN={};seenN[p.username.toLowerCase()]=1;
+function take(arr,tag){arr.forEach(function(u){var k=(u.username||"").toLowerCase();if(!k||seenN[k]||k.indexOf(q)<0)return;seenN[k]=1;out.push({username:u.username,verification:u.verification,avatar_url:u.avatar_url,tag:tag,pre:k.indexOf(q)===0?0:1})})}
+take(fol,"volg je");take(Object.keys(known).map(function(k){return known[k]}),"in deze kamer");if(extra)take(extra,"");
+out.sort(function(a,b){return a.pre-b.pre});return out.slice(0,6)}
+tx.oninput=async function(){var t=tok();if(!t){hideSug();return}
+var l=match(t.q);showSug(l);
+if(t.q.length>=2&&l.length<6){var n=++sq;
+var g=await sb.from("profiles").select("username,verification,avatar_url").ilike("username",t.q.replace(/_/g,"\\_")+"%").neq("id",p.id).limit(6);
+if(n!==sq||!tok())return;showSug(match(t.q,g.data||[]))}};
+tx.onblur=function(){setTimeout(hideSug,200)};
+tx.onkeydown=function(e){
+if(e.key==="Escape"){hideSug();return}
+if(e.key==="Enter"){if(!sug.hidden&&cur.length){e.preventDefault();pick(cur[0]);return}send()}}}
 
 async function gate(p,user){
 myYear=null;
