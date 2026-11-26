@@ -316,11 +316,13 @@ function profile(p,note){
 var v=p.verification==="verified",sub=[v?p.occupation:"",p.city].filter(Boolean).join(" · ");
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar'+rg(p)+'">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(p,null)+'<div id="vgx"></div>'+((!p.bio&&!(p.interests||[]).length)?'<div class="small" style="margin-top:8px">Vertel iets over jezelf: voeg een bio en interesses toe via Instellingen.</div>':'')+'<div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
 +(note?'<div class="msg ok c">'+esc(note)+'</div>':'')
-+'<button class="btn ghost" id="lm">Lidmaatschap</button><button class="btn ghost" id="st">Instellingen</button>'+(ISADMIN?'<button class="btn" id="adm" style="margin-top:8px">Beheer</button>':'');
-$("#bk").onclick=function(){home(p)};if(ISADMIN)$("#adm").onclick=function(){admin(p)};$("#st").onclick=function(){settings(p)};$("#lm").onclick=function(){plans(p)};
++'<button class="btn ghost" id="lm">Lidmaatschap</button><button class="btn ghost" id="st">Instellingen</button>'+(ISADMIN?'<button class="btn" id="adm" style="margin-top:8px;position:relative">Beheer <i class="nbd adm" id="adcnt2" hidden style="position:static;margin-left:6px;vertical-align:middle"></i></button>':'');
+$("#bk").onclick=function(){home(p)};if(ISADMIN){$("#adm").onclick=function(){admin(p)};adminBadge()}$("#st").onclick=function(){settings(p)};$("#lm").onclick=function(){plans(p)};
 fillGast(p.id,true);sb.rpc("follow_counts",{uid:p.id}).then(function(r){var el=document.getElementById("fcc");if(el&&r.data)el.innerHTML=cntLine(r.data)})}
 
 var ISADMIN=false;
+function adminBadge(){if(!ISADMIN)return;sb.rpc("admin_lijst").then(function(r){if(!r.data)return;var n=(r.data.verif||[]).length+(r.data.reports||[]).length;
+["adcnt","adcnt2"].forEach(function(k){var e=document.getElementById(k);if(e){e.textContent=n;e.hidden=!n}})})}
 function tijd(t){try{return new Date(t).toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){return ""}}
 async function admin(p){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><h2 style="margin:6px 0 10px">Beheer</h2><div id="msg"></div><div id="adv"><div class="small c">Laden…</div></div>';
@@ -453,7 +455,7 @@ $("#lo").onclick=async function(){stopNotifs();if(appChan){sb.removeChannel(appC
 
 var nchan=null,unread={},roomsC=[];
 function rg(u){return u&&u.plan==='diamond'?' rg-dia':(u&&u.plan==='gold'?' rg-gold':'')}
-function paintBadges(){document.querySelectorAll(".nbd").forEach(function(e){var n=unread[e.id.slice(2)]||0;e.textContent=n;e.hidden=!n})}
+function paintBadges(){document.querySelectorAll(".nbd:not(.adm)").forEach(function(e){var n=unread[e.id.slice(2)]||0;e.textContent=n;e.hidden=!n})}
 function banner(p,name,slug,from){
 var r=roomsC.filter(function(x){return x.slug===slug})[0];if(!r&&slug!=="dm")return;
 var o=document.getElementById("bnr");if(o)o.remove();
@@ -607,9 +609,9 @@ return r.access==="vip"?"Diamond en verified":(r.access==="age30"?"Vanaf 30 jaar
 var LOCKI='<svg viewBox="0 0 24 24" width="11" height="11" style="vertical-align:-1px;margin-right:4px;stroke:currentColor;fill:none;stroke-width:2" aria-hidden="true"><path d="M6 11V8a6 6 0 0112 0v3M5 11h14v10H5z"/></svg>';
 async function home(p){
 leave();startPresence(p);startNotifs(p);setRoom(null);
-app.innerHTML='<div class="tb"><div class="bm"><span class="logo"></span>Auré</div><div style="display:flex;align-items:center;gap:2px"><button class="ib" id="sqb" aria-label="Zoek leden"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button><button class="ib" id="dmb" aria-label="Berichten"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><i class="nbd" id="b-dm" hidden></i></button><button class="ib" id="pf" aria-label="Mijn profiel"><span class="mini'+rg(p)+'">'+avh(p)+'</span></button></div></div>'
+app.innerHTML='<div class="tb"><div class="bm"><span class="logo"></span>Auré</div><div style="display:flex;align-items:center;gap:2px"><button class="ib" id="sqb" aria-label="Zoek leden"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button><button class="ib" id="dmb" aria-label="Berichten"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><i class="nbd" id="b-dm" hidden></i></button><button class="ib" id="pf" aria-label="Mijn profiel"><span class="mini'+rg(p)+'">'+avh(p)+'</span><i class="nbd adm" id="adcnt" hidden></i></button></div></div>'
 +'<div class="small" id="ao" style="margin:0 2px 4px"></div><div id="ins"></div><input type="text" id="sq" placeholder="Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin:6px 0 10px" hidden><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
-$("#pf").onclick=function(){profile(p)};$("#dmb").onclick=function(){dmList(p)};paint();installHint();pushHint();
+$("#pf").onclick=function(){profile(p)};$("#dmb").onclick=function(){dmList(p)};paint();installHint();pushHint();adminBadge();
 $("#sqb").onclick=function(){var q=$("#sq");q.hidden=!q.hidden;if(!q.hidden)q.focus();else{q.value="";$("#sr").innerHTML=""}};
 var st=null,qn=0;
 $("#sq").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20);var q=this.value;clearTimeout(st);var box=$("#sr");
@@ -785,7 +787,7 @@ draw()}
 async function gate(p,user){
 myYear=null;
 if(p&&p.banned){app.innerHTML=head()+'<div class="card c"><b>Je account is gepauzeerd</b><p class="small">Je account is gepauzeerd na meldingen van andere leden. Denk je dat dit niet klopt? Neem contact met ons op'+(LEGAL_MAIL?' via '+esc(LEGAL_MAIL):'')+'.</p><button class="btn ghost" id="lo2">Uitloggen</button></div>';$("#lo2").onclick=async function(){await sb.auth.signOut();mode="login";auth()};return}
-ISADMIN=false;sb.rpc("is_admin").then(function(r){ISADMIN=!!r.data});
+ISADMIN=false;sb.rpc("is_admin").then(function(r){ISADMIN=!!r.data;adminBadge()});
 var q=await sb.from("private_profiles").select("birth_year").eq("id",user.id).maybeSingle();
 if(q.data){myYear=q.data.birth_year;enter(p);return}
 var by=(user.user_metadata||{}).birth_year;
