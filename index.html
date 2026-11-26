@@ -158,6 +158,8 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .chip{font:inherit;font-size:13px;padding:7px 12px;border-radius:99px;border:1px solid var(--line);color:var(--ink);background:none}
 button.chip{cursor:pointer}.chip.on{border-color:var(--gold);background:rgba(201,169,110,.16);color:var(--vg)}
 .bio{font-size:14px;line-height:1.5;margin:10px auto 0;max-width:320px;white-space:pre-line}
+.vgb{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:6px 12px;border-radius:99px;border:1px solid var(--gold);background:linear-gradient(135deg,rgba(233,211,166,.22),rgba(201,169,110,.08));color:var(--vg);font-size:12px;font-weight:600;letter-spacing:.04em}
+.vgb svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linejoin:round}
 .wd{display:flex;justify-content:center;gap:8px;margin:18px 0 4px}
 .wd i{width:7px;height:7px;border-radius:50%;background:var(--line)}.wd i.on{background:var(--gold);width:22px;border-radius:99px}
 .wsi{width:54px;height:54px;border-radius:50%;margin:0 auto 14px;border:1px solid var(--gold);display:grid;place-items:center;color:var(--gold);background:rgba(201,169,110,.09)}
@@ -258,6 +260,11 @@ function bioHtml(u,me){var h="";if(u.bio)h+='<p class="bio">'+esc(u.bio)+'</p>';
 if(it.length){var mine=(me&&me.interests)||[];h+='<div class="chips">'+it.map(function(x){return '<span class="chip'+(mine.indexOf(x)>-1?' on':'')+'">'+esc(x)+'</span>'}).join("")+'</div>';
 var sh=it.filter(function(x){return mine.indexOf(x)>-1});if(me&&sh.length)h+='<div class="small" style="margin-top:8px">Jullie delen '+sh.length+(sh.length===1?' interesse':' interesses')+'</div>'}
 return h}
+var VG_MIN=3;
+function gastHtml(n,own){
+if(n>=VG_MIN)return '<div class="vgb"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg>Vaste gast · '+n+' Avonden</div>';
+if(!own)return "";var r=VG_MIN-n;return '<div class="small" style="margin-top:8px">Kom nog '+r+(r===1?' keer':' keer')+' naar De Avond voor het stempel <b style="color:var(--vg)">Vaste gast</b>.</div>'}
+function fillGast(uid,own){sb.rpc("avond_aantal",{uid:uid}).then(function(r){var el=document.getElementById("vgx");if(el&&!r.error)el.innerHTML=gastHtml(r.data||0,own)})}
 function cntLine(c){var f=c.followers||0,g=c.following||0;return '<b>'+f+'</b> '+(f===1?'volger':'volgers')+' · <b>'+g+'</b> volgend'}
 async function member(id,p,back){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Terug</button></div><div class="card c" id="mb"><div class="small">Laden…</div></div>';
@@ -270,8 +277,9 @@ var cn=await sb.rpc("follow_counts",{uid:id}),c=cn.data||{followers:0,following:
 var isF=false;
 if(!mine){var fr=await sb.from("follows").select("followed").eq("followed",id).limit(1);isF=!!(fr.data&&fr.data.length)}
 var sub=[v?u.occupation:"",u.city].filter(Boolean).join(" · ");
-box.innerHTML='<div class="avatar'+rg(u)+'">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(u,mine?null:p)+'<div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
+box.innerHTML='<div class="avatar'+rg(u)+'">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(u,mine?null:p)+'<div id="vgx"></div><div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
 +(mine?'':'<button class="btn'+(isF?' ghost':'')+'" id="fo">'+(isF?'Volgend':'Volgen')+'</button><button class="btn ghost" id="mdm" style="margin-top:8px">Bericht</button><div class="small" id="mdh" style="margin-top:8px" hidden>Alleen Diamond en verified leden kunnen een gesprek beginnen. Antwoorden kan iedereen.</div><div id="msg"></div>');
+fillGast(id,mine);
 if(!mine){$("#mdm").onclick=async function(){
 if(master(p)){dmChat(p,u,function(){member(id,p,back)});return}
 var rc=await sb.from("dms").select("id").eq("sender",id).limit(1);
@@ -306,11 +314,11 @@ o.querySelector("#oc").onclick=function(){o.remove()};document.body.appendChild(
 
 function profile(p,note){
 var v=p.verification==="verified",sub=[v?p.occupation:"",p.city].filter(Boolean).join(" · ");
-app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar'+rg(p)+'">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(p,null)+((!p.bio&&!(p.interests||[]).length)?'<div class="small" style="margin-top:8px">Vertel iets over jezelf: voeg een bio en interesses toe via Instellingen.</div>':'')+'<div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Chatrooms</button></div><div class="card c"><div class="avatar'+rg(p)+'">'+avh(p)+'</div><h2 style="margin:6px 0 2px">@'+esc(p.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div>'+bioHtml(p,null)+'<div id="vgx"></div>'+((!p.bio&&!(p.interests||[]).length)?'<div class="small" style="margin-top:8px">Vertel iets over jezelf: voeg een bio en interesses toe via Instellingen.</div>':'')+'<div style="margin-top:8px;font-size:14px" id="fcc"></div><div class="small" style="margin-top:6px">Lidmaatschap: '+esc(v?"verified":p.plan)+'</div></div>'
 +(note?'<div class="msg ok c">'+esc(note)+'</div>':'')
 +'<button class="btn ghost" id="lm">Lidmaatschap</button><button class="btn ghost" id="st">Instellingen</button>';
 $("#bk").onclick=function(){home(p)};$("#st").onclick=function(){settings(p)};$("#lm").onclick=function(){plans(p)};
-sb.rpc("follow_counts",{uid:p.id}).then(function(r){var el=document.getElementById("fcc");if(el&&r.data)el.innerHTML=cntLine(r.data)})}
+fillGast(p.id,true);sb.rpc("follow_counts",{uid:p.id}).then(function(r){var el=document.getElementById("fcc");if(el&&r.data)el.innerHTML=cntLine(r.data)})}
 
 async function blocked(p){
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Instellingen</button></div><div class="card" id="bl"><div class="small c">Laden…</div></div>';
@@ -402,9 +410,9 @@ var bioEdit='<label>Over jou</label><textarea id="bi" maxlength="160" rows="3" p
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="card c"><div class="avatar'+rg(p)+'" id="av">'+avh(p)+'</div><button class="back" id="ph">Foto wijzigen</button><input type="file" id="fi" accept="image/*" hidden></div>'
 +'<div class="card" style="margin-top:12px"><label style="margin-top:0">Gebruikersnaam</label><div style="font-size:16px;font-weight:600">@'+esc(p.username)+'</div><div class="small" style="margin-top:2px">Je gebruikersnaam is vast en kan niet worden gewijzigd.</div><label>Stad</label><input type="text" id="ct" maxlength="30" value="'+qa(p.city)+'" placeholder="bijv. Amsterdam">'+bioEdit
 +(v?'<label>Wat je doet</label><input type="text" id="oc" maxlength="30" value="'+qa(p.occupation)+'" placeholder="bijv. presentatrice">':'<p class="small">Met een vinkje kun je hier tonen wat je doet.</p>')
-+'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div>'+(v?'':'<button class="btn ghost" id="vq">Verificatie aanvragen</button>')+'<button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button><div class="c" style="margin-top:14px"><button class="back" id="g1">Voorwaarden</button> · <button class="back" id="g2">Privacy</button></div><div class="c"><button class="back" id="dz" style="color:#c96a6a;font-weight:500">Account verwijderen</button></div>';
++'<button class="btn" id="sv">Opslaan</button><div id="msg"></div></div>'+(v?'':'<button class="btn ghost" id="vq">Verificatie aanvragen</button>')+''+(isApp()&&pushOk()?'<button class="btn ghost" id="nt">Meldingen aanzetten</button>':'')+'<button class="btn ghost" id="bl">Geblokkeerde leden</button><button class="btn ghost" id="lo">Uitloggen</button><div class="c" style="margin-top:14px"><button class="back" id="g1">Voorwaarden</button> · <button class="back" id="g2">Privacy</button></div><div class="c"><button class="back" id="dz" style="color:#c96a6a;font-weight:500">Account verwijderen</button></div>';
 $("#g1").onclick=function(){legal("terms")};$("#g2").onclick=function(){legal("privacy")};$("#dz").onclick=function(){delAcc(p)};
-$("#bk").onclick=function(){profile(p)};$("#bl").onclick=function(){blocked(p)};if(!v)$("#vq").onclick=function(){verifyReq(p)};
+$("#bk").onclick=function(){profile(p)};$("#bl").onclick=function(){blocked(p)};if($("#nt"))$("#nt").onclick=async function(){this.disabled=true;var r=await enablePush(false);this.disabled=false;say(pushMsg(r),r==="aan")};if(!v)$("#vq").onclick=function(){verifyReq(p)};
 $("#ph").onclick=function(){$("#fi").click()};
 $("#bi").oninput=function(){$("#bic").textContent=this.value.length+"/160"};
 document.querySelectorAll("#ic .chip").forEach(function(b){b.onclick=function(){var x=INTER[+b.dataset.x],k=sel.indexOf(x);
@@ -536,7 +544,27 @@ var tm=r.opens?"open "+(r.days&&r.days.length?"op "+r.days.map(function(d){retur
 if(planOk(r,p))return "Gesloten, "+tm+".";
 var b=r.access==="vip"?"Alleen voor verified leden en Diamond":(r.access==="age30"?"Voor leden van 30 jaar en ouder":(r.access==="gold"?"Alleen voor Gold, Diamond en verified leden":(r.access==="diamond"?"Alleen voor Diamond en verified leden":"Vanaf "+r.access)));
 return b+(tm?", "+tm:"")+"."}
-var avT=null,instEv=null;
+var avT=null,instEv=null,VAPID_PUB="BEr9UmsvQhuNO4-g_MbmAV4TEGUWBvQ4QJVNB1eE3sAZgHIXkoO55NwpQpvjqNqZMCqGwVdz3I_bi0y_AbIjQk8";
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
+function b64u(x){var p="=".repeat((4-x.length%4)%4),b=atob((x+p).replace(/-/g,"+").replace(/_/g,"/")),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a}
+function pushOk(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window}
+async function enablePush(silent){
+try{if(!pushOk())return "niet";
+var perm=Notification.permission;
+if(perm==="default"&&!silent)perm=await Notification.requestPermission();
+if(perm!=="granted")return perm;
+var reg=await navigator.serviceWorker.ready;
+var sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
+var j=sub.toJSON(),r=await sb.rpc("push_opslaan",{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth});
+return r.error?"fout":"aan"}catch(e){return "fout"}}
+function pushMsg(r){return r==="aan"?"✓ Meldingen staan aan.":(r==="denied"?"Meldingen zijn uitgezet. Zet ze aan via Instellingen van je telefoon → Meldingen → Auré.":(r==="niet"?"Meldingen werken alleen als je Auré opent via het icoon op je beginscherm.":"Meldingen aanzetten lukt nu niet. Probeer het later opnieuw."))}
+function pushHint(){var el=document.getElementById("ins");if(!el||!isApp()||!pushOk())return;
+if(Notification.permission==="granted"){enablePush(true);return}
+if(Notification.permission==="denied")return;
+try{if(localStorage.getItem("aure_push"))return}catch(e){}
+el.innerHTML='<div class="ins"><img src="apple-touch-icon.png" alt=""><div><b>Zet meldingen aan</b><div class="small">Hoor het als iemand je een bericht stuurt of je noemt, en als De Avond begint.</div><button class="back" id="pg" style="padding:6px 0 0">Meldingen aanzetten</button></div><button class="x" id="px" aria-label="Sluiten">×</button></div>';
+$("#px").onclick=function(){try{localStorage.setItem("aure_push","1")}catch(e){}el.innerHTML=""};
+$("#pg").onclick=async function(){this.disabled=true;var r=await enablePush(false);el.innerHTML='<div class="'+(r==="aan"?"msg ok c":"small c")+'" style="margin:8px 0">'+esc(pushMsg(r))+'</div>'}}
 window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();instEv=e;var el=document.getElementById("ins");if(el)installHint()});
 function isApp(){return (window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true}
 function installHint(){var el=document.getElementById("ins");if(!el||isApp())return;
@@ -557,7 +585,7 @@ async function home(p){
 leave();startPresence(p);startNotifs(p);setRoom(null);
 app.innerHTML='<div class="tb"><div class="bm"><span class="logo"></span>Auré</div><div style="display:flex;align-items:center;gap:2px"><button class="ib" id="sqb" aria-label="Zoek leden"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button><button class="ib" id="dmb" aria-label="Berichten"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><i class="nbd" id="b-dm" hidden></i></button><button class="ib" id="pf" aria-label="Mijn profiel"><span class="mini'+rg(p)+'">'+avh(p)+'</span></button></div></div>'
 +'<div class="small" id="ao" style="margin:0 2px 4px"></div><div id="ins"></div><input type="text" id="sq" placeholder="Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin:6px 0 10px" hidden><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
-$("#pf").onclick=function(){profile(p)};$("#dmb").onclick=function(){dmList(p)};paint();installHint();
+$("#pf").onclick=function(){profile(p)};$("#dmb").onclick=function(){dmList(p)};paint();installHint();pushHint();
 $("#sqb").onclick=function(){var q=$("#sq");q.hidden=!q.hidden;if(!q.hidden)q.focus();else{q.value="";$("#sr").innerHTML=""}};
 var st=null,qn=0;
 $("#sq").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20);var q=this.value;clearTimeout(st);var box=$("#sr");
@@ -657,7 +685,7 @@ if(g.data){g.data.reverse().forEach(add)}
 if(!box.children.length)box.innerHTML='<div class="small c" style="margin:auto">Nog geen berichten. Zeg als eerste hallo!</div>';
 chan=sb.channel("room-"+r.slug).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"room=eq."+r.slug},async function(e){
 var q=await sb.from("messages").select(SEL).eq("id",e.new.id).single();if(q.data){var f=box.querySelector(".small.c");if(f)box.innerHTML="";add(q.data)}}).subscribe();
-setRoom(r.slug);paint();
+setRoom(r.slug);paint();if(r.slug==="avond")sb.rpc("avond_inchecken").then(function(){});
 if(unread[r.slug]){unread[r.slug]=0;sb.from("notifications").update({read:true}).eq("room",r.slug).eq("read",false).then(function(){})}
 async function send(){var t=$("#tx").value.trim();if(!t)return;$("#sd").disabled=true;
 var i=await sb.from("messages").insert({room:r.slug,body:t}).select(SEL).single();
