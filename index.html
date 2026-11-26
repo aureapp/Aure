@@ -112,9 +112,9 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .tg2{font:600 10px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--gold);color:var(--vg);border-radius:99px;padding:3px 8px;font-style:normal}
 .pc li .tg2{margin-left:auto;flex:none}
 .avatar{box-shadow:0 0 0 2px var(--line)}
-.rg-gold{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(201,169,110,.45)!important}
+.rg-gold{box-shadow:0 0 0 2px #e2c47a,0 0 12px rgba(230,190,90,.85)!important}
 .rg-dia{box-shadow:0 0 0 2px #a9cfe4,0 0 12px rgba(143,184,208,.7)!important}
-.avatar.rg-gold{box-shadow:0 0 0 4px var(--gold),0 0 18px rgba(201,169,110,.5)!important}
+.avatar.rg-gold{box-shadow:0 0 0 4px #e2c47a,0 0 26px rgba(230,190,90,.85)!important}
 .avatar.rg-dia{box-shadow:0 0 0 4px #a9cfe4,0 0 22px rgba(143,184,208,.75)!important}
 .av2.rg-gold,.av2.rg-dia,.mini.rg-gold,.mini.rg-dia{border-radius:50%}
 .send{display:flex;gap:8px;margin-top:10px}.send input{flex:1}.send button{width:auto;margin:0;padding:0 20px}
@@ -216,7 +216,11 @@ var isF=false;
 if(!mine){var fr=await sb.from("follows").select("followed").eq("followed",id).limit(1);isF=!!(fr.data&&fr.data.length)}
 var sub=[v?u.occupation:"",u.city].filter(Boolean).join(" · ");
 box.innerHTML='<div class="avatar'+rg(u)+'">'+avh(u)+'</div><h2 style="margin:6px 0 2px">@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</h2><div class="small">'+esc(sub)+'</div><div style="margin-top:10px;font-size:14px" id="fc">'+cntLine(c)+'</div>'
-+(mine?'':'<button class="btn'+(isF?' ghost':'')+'" id="fo">'+(isF?'Volgend':'Volgen')+'</button><div id="msg"></div>');
++(mine?'':'<button class="btn'+(isF?' ghost':'')+'" id="fo">'+(isF?'Volgend':'Volgen')+'</button><button class="btn ghost" id="mdm" style="margin-top:8px">Bericht</button><div class="small" id="mdh" style="margin-top:8px" hidden>Alleen Diamond en verified leden kunnen een gesprek beginnen. Antwoorden kan iedereen.</div><div id="msg"></div>');
+if(!mine){$("#mdm").onclick=async function(){
+if(master(p)){dmChat(p,u,function(){member(id,p,back)});return}
+var rc=await sb.from("dms").select("id").eq("sender",id).limit(1);
+if(rc.data&&rc.data.length){dmChat(p,u,function(){member(id,p,back)})}else{$("#mdh").hidden=false}}}
 if(!mine){$("#fo").onclick=async function(){
 this.disabled=true;
 var e=isF?await sb.from("follows").delete().eq("followed",id):await sb.from("follows").insert({followed:id});
@@ -226,9 +230,9 @@ this.disabled=false;this.className="btn"+(isF?" ghost":"");this.textContent=isF?
 
 var PRICE={gold:"",diamond:""};
 var PINFO=[
-{id:"bronze",name:"Bronze",t:"#a8793f",items:[["De vijf openbare kamers (en de 30+ Lounge vanaf 30 jaar)",0],["Chatten, volgen en leden zoeken",0],["Berichten melden en leden blokkeren",0],["Antwoorden op privéberichten",1]]},
+{id:"bronze",name:"Bronze",t:"#a8793f",items:[["De vijf openbare kamers (en de 30+ Lounge vanaf 30 jaar)",0],["Chatten, volgen en leden zoeken",0],["Berichten melden en leden blokkeren",0],["Antwoorden op privéberichten",0]]},
 {id:"gold",name:"Gold",t:"#d6b565",items:[["Alles van Bronze",0],["Toegang tot The Gold Club",0],["Gouden rand om je profielfoto",0],["Een paar privégesprekken per dag beginnen",1],["Je video\u2019s kunnen worden uitgelicht",1]]},
-{id:"diamond",name:"Diamond",t:"#8fb8d0",items:[["Alles van Gold",0],["IJsblauwe diamantrand om je profielfoto",0],["Toegang tot Late Night en de VIP Lounge",0],["Onbeperkt privégesprekken beginnen",1],["Meer bereik voor je video\u2019s",1]]}];
+{id:"diamond",name:"Diamond",t:"#8fb8d0",items:[["Alles van Gold",0],["IJsblauwe diamantrand om je profielfoto",0],["Toegang tot Late Night en de VIP Lounge",0],["Onbeperkt privégesprekken beginnen",0],["Meer bereik voor je video\u2019s",1]]}];
 function plans(p){
 var v=p.verification==="verified",rank=PLANS.indexOf(p.plan);
 app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Profiel</button></div><div class="c" style="margin:4px 0 6px"><i style="font:italic 400 22px Georgia,serif">Lidmaatschap</i></div>'
@@ -270,7 +274,7 @@ terms:["Gebruiksvoorwaarden",[
 ["Respect","Wees respectvol. Geen pesten, intimidatie, haat, bedreigingen of discriminatie. Geen spam of reclame zonder toestemming."],
 ["Verboden inhoud","Geen illegale inhoud, geen seksuele inhoud met of over minderjarigen, geen geweld of bedreigingen, en geen persoonlijke gegevens van anderen."],
 ["Je berichten","Wat je in een chatroom schrijft, kunnen alle leden van die kamer lezen. Deel dus niets wat je privé wilt houden. Jij blijft verantwoordelijk voor wat je schrijft."],
-["Melden en blokkeren","Je kunt berichten melden en leden blokkeren. Wij bekijken meldingen en kunnen berichten verwijderen of accounts beperken of sluiten."],
+["Melden en blokkeren","Je kunt berichten melden en leden blokkeren. Wij bekijken meldingen en kunnen berichten verwijderen of accounts beperken of sluiten. Privéberichten zijn alleen voor jou en de ander zichtbaar, behalve als een van jullie een bericht meldt: dan kunnen wij dat gemelde bericht lezen."],
 ["Vinkje en lidmaatschap","Het vinkje is alleen voor bekende personen en wordt na controle toegekend. Een vinkje of lidmaatschap geeft geen recht op bijzondere behandeling bij overtredingen."],
 ["Veiligheid en eigen verantwoordelijkheid","Deel geen telefoonnummers, adressen of privéfoto's met mensen die je hier ontmoet. Wij raden dat af. Doe je het toch, dan is dat je eigen keuze en risico. Spreek je buiten Auré af met iemand die je hier hebt leren kennen, dan is dat op eigen risico. Spreek af op een openbare plek en laat iemand weten waar je bent. Wij controleren niet wie iemand echt is en kunnen daar niet voor instaan."],
 ["Foto's en seksuele inhoud","Naaktfoto's en seksueel expliciete inhoud zijn niet toegestaan en worden verwijderd, en het account kan worden gesloten. Wat je in de app plaatst, kunnen andere leden zien en opslaan. Wij kunnen niet voorkomen dat anderen er iets mee doen. Deel dus alleen wat je goed vindt. Foto's van anderen mag je nooit zonder toestemming plaatsen of doorsturen."],
@@ -278,7 +282,7 @@ terms:["Gebruiksvoorwaarden",[
 ["Onze verantwoordelijkheid","Auré is een vrijblijvende app voor mensen van 18 jaar en ouder. Voor wat andere leden doen of zeggen zijn wij niet aansprakelijk. Dit geldt niet als de wet anders bepaalt, bijvoorbeeld bij opzet of grove nalatigheid van onze kant."],
 ["Wijzigingen","Auré is in ontwikkeling. Functies, kamers en regels kunnen veranderen. Je kunt je account altijd zelf verwijderen via Instellingen."]]],
 privacy:["Privacyverklaring",[
-["Welke gegevens we bewaren","Gebruikersnaam, e-mailadres, geboortejaar, profielfoto, stad en beroep (alleen als je die invult), je chatberichten, je blokkades en meldingen, en eventuele verificatieaanvragen."],
+["Welke gegevens we bewaren","Gebruikersnaam, e-mailadres, geboortejaar, profielfoto, stad en beroep (alleen als je die invult), je chatberichten en privéberichten, je blokkades en meldingen, en eventuele verificatieaanvragen."],
 ["Waarvoor","Om je account te laten werken, om kamers voor jouw leeftijd en lidmaatschap te openen, om de chat te tonen, en om misbruik tegen te gaan."],
 ["Wat anderen zien","Je gebruikersnaam, foto, stad, beroep (met vinkje) en je berichten. Je geboortejaar en e-mailadres zien andere leden nooit."],
 ["Waar het staat","Je gegevens staan bij onze hostingpartner Supabase in een datacenter in de EU (Ierland). De website draait via GitHub Pages."],
@@ -357,12 +361,12 @@ $("#lo").onclick=async function(){stopNotifs();if(appChan){sb.removeChannel(appC
 var nchan=null,unread={},roomsC=[];
 function rg(u){return u&&u.plan==='diamond'?' rg-dia':(u&&u.plan==='gold'?' rg-gold':'')}
 function paintBadges(){document.querySelectorAll(".nbd").forEach(function(e){var n=unread[e.id.slice(2)]||0;e.textContent=n;e.hidden=!n})}
-function banner(p,name,slug){
-var r=roomsC.filter(function(x){return x.slug===slug})[0];if(!r)return;
+function banner(p,name,slug,from){
+var r=roomsC.filter(function(x){return x.slug===slug})[0];if(!r&&slug!=="dm")return;
 var o=document.getElementById("bnr");if(o)o.remove();
 o=document.createElement("div");o.id="bnr";o.className="bn";
-o.innerHTML='<b>@'+esc(name)+'</b> noemde je in <b>'+esc(r.name)+'</b><span class="small">Tik om te openen</span>';
-o.onclick=function(){o.remove();room(r,p)};
+o.innerHTML=slug==="dm"?'<b>@'+esc(name)+'</b> stuurde je een bericht<span class="small">Tik om te openen</span>':'<b>@'+esc(name)+'</b> noemde je in <b>'+esc(r.name)+'</b><span class="small">Tik om te openen</span>';
+o.onclick=function(){o.remove();if(slug==="dm")dmChat(p,from,function(){dmList(p)});else room(r,p)};
 document.body.appendChild(o);setTimeout(function(){if(o.parentNode)o.remove()},7000)}
 async function startNotifs(p){
 if(nchan)return;
@@ -370,11 +374,74 @@ var g=await sb.from("notifications").select("room").eq("read",false);
 unread={};(g.data||[]).forEach(function(x){unread[x.room]=(unread[x.room]||0)+1});paintBadges();
 nchan=sb.channel("notif-"+p.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:"user_id=eq."+p.id},async function(e){
 var n=e.new;
+if(n.room==="dm"&&curDm===n.from_user&&document.getElementById("dmm")){await sb.from("notifications").update({read:true}).eq("id",n.id);return}
 if(curRoom===n.room&&document.getElementById("msgs")){await sb.from("notifications").update({read:true}).eq("id",n.id);return}
 unread[n.room]=(unread[n.room]||0)+1;paintBadges();
 var f=await sb.from("profiles").select("username").eq("id",n.from_user).maybeSingle();
-banner(p,(f.data||{}).username||"iemand",n.room)}).subscribe()}
+banner(p,(f.data||{}).username||"iemand",n.room,n.from_user)}).subscribe()}
 function stopNotifs(){if(nchan){sb.removeChannel(nchan);nchan=null}unread={};var o=document.getElementById("bnr");if(o)o.remove()}
+
+var DTF=new Intl.DateTimeFormat("nl-NL",{timeZone:"Europe/Amsterdam",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+async function dmList(p){
+leave();setRoom(null);
+app.innerHTML=head()+'<div class="top"><button class="back" id="bk">← Terug</button></div><div class="c" style="margin:4px 0 10px"><i style="font:italic 400 22px Georgia,serif">Berichten</i></div><div id="dl" class="small c">Laden…</div>';
+$("#bk").onclick=function(){home(p)};
+var g=await sb.from("dms").select("id,sender,recipient,body,read,created_at").order("created_at",{ascending:false}).limit(300);
+var box=$("#dl");
+if(g.error){box.textContent="Berichten laden lukt niet.";return}
+var th={},ord=[];(g.data||[]).forEach(function(m){var o=m.sender===p.id?m.recipient:m.sender;if(!th[o]){th[o]={last:m,n:0};ord.push(o)}if(m.recipient===p.id&&!m.read)th[o].n++});
+if(!ord.length){box.innerHTML='<div class="card c small">Nog geen berichten.'+(master(p)?' Open een profiel en tik op Bericht om een gesprek te beginnen.':' Je kunt antwoorden zodra iemand je een bericht stuurt.')+'</div>';return}
+var pf=await sb.from("profiles").select("id,username,verification,avatar_url,plan").in("id",ord),pm={};(pf.data||[]).forEach(function(u){pm[u.id]=u});
+box.className="";
+box.innerHTML='<div class="card" style="padding:4px 14px">'+ord.map(function(o,i){var u=pm[o]||{username:"?"},t=th[o],v=u.verification==="verified";
+return '<button class="back" data-i="'+i+'" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 0"><span class="mini'+rg(u)+'">'+avh(u)+'</span><span style="flex:1;min-width:0"><b>@'+esc(u.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+'<span class="small" style="display:block;font-weight:'+(t.n?'600':'400')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(t.last.sender===p.id?'Jij: ':'')+esc(t.last.body)+'</span></span>'+(t.n?'<i class="nbd">'+t.n+'</i>':'')+'</button>'}).join("")+'</div>';
+box.querySelectorAll("[data-i]").forEach(function(b){b.onclick=function(){var o=ord[+b.dataset.i];dmChat(p,pm[o]||{id:o,username:"?"},function(){dmList(p)})}})}
+async function dmChat(p,u,back){
+leave();setRoom(null);curDm=u.id;
+var v=u.verification==="verified";
+app.innerHTML='<div class="brand" style="margin:10px 0 0;font-size:20px"><span class="logo"></span>Auré</div><div class="hd"><button class="back" id="bk" aria-label="Terug" style="font-size:20px;padding:6px 12px 6px 0">←</button><div class="t"><i>@'+esc(u.username)+(v?'<span class="ck">✓</span>':'')+'</i></div><span class="sp"></span></div><div class="card" style="padding:0;position:relative"><div id="dmm" style="display:flex;flex-direction:column;gap:6px;padding:12px;min-height:240px;max-height:55vh;overflow-y:auto"></div></div><div class="pill"><input type="text" id="tx" maxlength="500" placeholder="Schrijf een bericht…" autocomplete="off"><button id="sd" aria-label="Versturen">↑</button></div><div id="msg"></div>';
+$("#bk").onclick=back;
+var box=$("#dmm"),seen={},TF=new Intl.DateTimeFormat("nl-NL",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit"});
+function add(m){if(!m||seen[m.id])return;seen[m.id]=1;
+var me=m.sender===p.id,d=document.createElement("div");d.className="g"+(me?" me":"");
+var row=document.createElement("div");row.className="row f";
+var c=document.createElement("div");c.className="col";c.innerHTML='<div class="bb">'+esc(m.body)+'</div>';row.appendChild(c);
+if(!me){var fb=document.createElement("button");fb.className="fl";fb.textContent="⋯";fb.setAttribute("aria-label","Melden of blokkeren");fb.onclick=function(){dmMenu(m)};row.appendChild(fb)}
+d.appendChild(row);var tm=document.createElement("div");tm.className="tm2";tm.textContent=DTF.format(new Date(m.created_at));d.appendChild(tm);
+var f=box.querySelector(".small.c");if(f)f.remove();
+box.appendChild(d);box.scrollTop=box.scrollHeight}
+function dmMenu(m){
+var o=document.createElement("div");o.className="ov";
+function close(){o.remove()}
+function main(){o.innerHTML='<div class="sheet"><b>@'+esc(u.username)+'</b><button class="btn ghost" id="a1">Bericht melden</button><button class="btn ghost" id="a2">Blokkeren</button><button class="back" id="a3" style="width:100%;margin-top:6px">Annuleren</button></div>';
+o.querySelector("#a1").onclick=reasons;o.querySelector("#a2").onclick=blk;o.querySelector("#a3").onclick=close}
+function reasons(){var R=[["spam","Spam of reclame"],["intimidatie","Intimidatie of pesten"],["seksueel","Seksuele of ongewenste inhoud"],["minderjarig","Lijkt minderjarig"],["anders","Anders"]];
+o.innerHTML='<div class="sheet"><b>Waarom meld je dit?</b>'+R.map(function(r){return '<button class="btn ghost" data-r="'+r[0]+'">'+r[1]+'</button>'}).join("")+'<button class="back" id="a3" style="width:100%;margin-top:6px">Terug</button></div>';
+o.querySelector("#a3").onclick=main;
+o.querySelectorAll("[data-r]").forEach(function(b){b.onclick=async function(){
+var i=await sb.from("reports").insert({reported:u.id,message_text:String(m.body).slice(0,500),room:"dm",reason:b.dataset.r});
+o.innerHTML='<div class="sheet c"><b>'+(i.error?"Melden lukt niet. Probeer het later opnieuw.":"Bedankt, we kijken ernaar.")+'</b></div>';setTimeout(close,1600)}})}
+async function blk(){
+var i=await sb.from("blocks").insert({blocked:u.id});
+if(i.error&&i.error.code!=="23505"){o.innerHTML='<div class="sheet c"><b>Blokkeren lukt niet.</b></div>';setTimeout(close,1600);return}
+o.innerHTML='<div class="sheet c"><b>@'+esc(u.username)+' is geblokkeerd.</b><p class="small">Je ziet dit gesprek niet meer. Je kunt dit terugdraaien via Instellingen.</p></div>';setTimeout(function(){close();dmList(p)},1900)}
+main();document.body.appendChild(o)}
+async function markRead(){
+if(unread.dm){sb.from("notifications").update({read:true}).eq("room","dm").eq("from_user",u.id).eq("read",false).then(function(){});
+var l=await sb.from("notifications").select("id",{count:"exact",head:true}).eq("room","dm").eq("read",false);unread.dm=l.count||0;paintBadges()}
+sb.from("dms").update({read:true}).eq("sender",u.id).eq("recipient",p.id).eq("read",false).then(function(){})}
+var g=await sb.from("dms").select("id,sender,recipient,body,created_at").or("and(sender.eq."+p.id+",recipient.eq."+u.id+"),and(sender.eq."+u.id+",recipient.eq."+p.id+")").order("created_at",{ascending:false}).limit(100);
+if(g.data)g.data.reverse().forEach(add);
+if(!box.children.length)box.innerHTML='<div class="small c" style="margin:auto">Nog geen berichten. Zeg hallo!</div>';
+markRead();
+dchan=sb.channel("dm-"+p.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"dms",filter:"recipient=eq."+p.id},function(e){
+if(e.new.sender!==u.id)return;add(e.new);markRead()}).subscribe();
+async function send(){var t=$("#tx").value.trim();if(!t)return;$("#sd").disabled=true;
+var i=await sb.from("dms").insert({recipient:u.id,body:t}).select("id,sender,recipient,body,created_at").single();
+$("#sd").disabled=false;
+if(i.error){say("Versturen lukt niet. Alleen Diamond en verified leden kunnen een gesprek beginnen, en je kunt niet sturen naar iemand die je hebt geblokkeerd.");return}
+$("#tx").value="";add(i.data);$("#tx").focus()}
+$("#sd").onclick=send;$("#tx").onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();send()}}}
 var PLANS=["bronze","gold","diamond"],chan=null,pchan=null,homeChans=[],appChan=null,appN=0,myYear=null;
 function dot(n){return '<span class="dot'+(n?' on':'')+'">●</span> '}
 function showOnline(){var e=document.getElementById("ao");if(e)e.innerHTML=dot(appN)+appN+(appN===1?" lid online":" leden online")}
@@ -388,7 +455,8 @@ var pc=document.getElementById("pc");if(pc&&curRoom)pc.innerHTML=dot(m[curRoom]|
 function startPresence(p){if(appChan)return;
 appChan=sb.channel("presence-app",{config:{presence:{key:p.id}}});
 appChan.on("presence",{event:"sync"},paint).subscribe(async function(st){if(st==="SUBSCRIBED"){appSub=true;await appChan.track({room:curRoom})}})}
-function leave(){if(chan){sb.removeChannel(chan);chan=null}}
+var dchan=null,curDm=null;
+function leave(){if(chan){sb.removeChannel(chan);chan=null}if(dchan){sb.removeChannel(dchan);dchan=null}curDm=null}
 function master(p){return p.verification==="verified"||p.plan==="diamond"}
 function planOk(r,p){
 if(master(p)||r.access==="free")return true;
@@ -408,8 +476,8 @@ return b+(tm?", "+tm:"")+"."}
 async function home(p){
 leave();startPresence(p);startNotifs(p);setRoom(null);
 var v=p.verification==="verified";
-app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini'+rg(p)+'">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><input type="text" id="sq" placeholder="🔍 Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin-bottom:10px"><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
-$("#pf").onclick=function(){profile(p)};paint();
+app.innerHTML=head()+'<div class="c small" id="ao" style="margin:-12px 0 12px"></div><div class="top"><span><span class="mini'+rg(p)+'">'+avh(p)+'</span><b>@'+esc(p.username)+'</b>'+(v?'<span class="ck">✓</span>':'')+' <span class="small">· '+esc(v?"verified":p.plan)+'</span></span><button class="back" id="pf">Mijn profiel</button></div><input type="text" id="sq" placeholder="🔍 Zoek leden…" maxlength="20" autocapitalize="none" autocomplete="off" style="margin-bottom:10px"><button class="btn ghost" id="dmb" style="margin:0 0 12px">Berichten <i class="nbd" id="b-dm" hidden></i></button><div id="sr"></div><div id="rl" class="small c">Laden…</div>';
+$("#pf").onclick=function(){profile(p)};$("#dmb").onclick=function(){dmList(p)};paint();
 var st=null,qn=0;
 $("#sq").oninput=function(){this.value=this.value.toLowerCase().replace(/[^a-z0-9._]/g,"").slice(0,20);var q=this.value;clearTimeout(st);var box=$("#sr");
 if(q.length<2){box.innerHTML="";return}
