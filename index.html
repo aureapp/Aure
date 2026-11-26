@@ -290,7 +290,7 @@ privacy:["Privacyverklaring",[
 ["Waarvoor","Om je account te laten werken, om kamers voor jouw leeftijd en lidmaatschap te openen, om de chat te tonen, en om misbruik tegen te gaan."],
 ["Wat anderen zien","Je gebruikersnaam, foto, stad, beroep (met vinkje) en je berichten. Je geboortejaar en e-mailadres zien andere leden nooit."],
 ["Waar het staat","Je gegevens staan bij onze hostingpartner Supabase in een datacenter in de EU (Ierland). De website draait via GitHub Pages."],
-["Hoe lang","Zolang je account bestaat. Verwijder je je account, dan wissen we je profiel, foto, berichten, blokkades en aanvragen."],
+["Hoe lang","Berichten in De Avond wissen we de volgende ochtend. Al het andere bewaren we zolang je account bestaat. Verwijder je je account, dan wissen we je profiel, foto, berichten, blokkades en aanvragen."],
 ["Jouw rechten","Je mag je gegevens inzien, laten verbeteren of laten wissen. Wissen kun je zelf via Instellingen → Account verwijderen. Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens."]
 ,["Contact",LEGAL_MAIL?("Vragen over privacy? Mail naar "+LEGAL_MAIL+"."):"Contactgegevens volgen."]]]};
 function legal(k){
@@ -468,12 +468,14 @@ if(r.access==="vip")return false;
 if(r.access==="age30")return !!myYear&&(new Date().getFullYear()-myYear>=30);
 return PLANS.indexOf(p.plan)>=PLANS.indexOf(r.access)}
 function hh(t){return String(t).slice(0,5)}
-function isOpen(r){if(!r.opens)return true;
+var DAYN=["","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];
+function amsDay(){return ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].indexOf(new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",weekday:"short"}).format(new Date()))+1}
+function isOpen(r){if(r.days&&r.days.length&&r.days.indexOf(amsDay())<0)return false;if(!r.opens)return true;
 var t=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date()),o=hh(r.opens),c=hh(r.closes);
 return o<c?(t>=o&&t<c):(t>=o||t<c)}
 function can(r,p){return planOk(r,p)&&isOpen(r)}
 function need(r,p){
-var tm=r.opens?"open van "+hh(r.opens)+" tot "+hh(r.closes):"";
+var tm=r.opens?"open "+(r.days&&r.days.length?"op "+r.days.map(function(d){return DAYN[d]}).join(", ")+" ":"")+"van "+hh(r.opens)+" tot "+hh(r.closes):"";
 if(planOk(r,p))return "Gesloten, "+tm+".";
 var b=r.access==="vip"?"Alleen voor verified leden en Diamond":(r.access==="age30"?"Voor leden van 30 jaar en ouder":(r.access==="gold"?"Alleen voor Gold, Diamond en verified leden":(r.access==="diamond"?"Alleen voor Diamond en verified leden":"Vanaf "+r.access)));
 return b+(tm?", "+tm:"")+"."}
@@ -497,15 +499,15 @@ return '<button class="back" data-i="'+i+'" style="display:flex;align-items:cent
 box.querySelectorAll("[data-i]").forEach(function(b){b.onclick=function(){member(rows[+b.dataset.i].id,p,function(){home(p)})}})},300)};
 var g=await sb.from("rooms").select("*").order("sort");
 if(g.error||!g.data){$("#rl").textContent="Chatrooms laden lukt niet.";return}
-roomsC=g.data;
+g.data=g.data.filter(function(r){return !r.hidden});roomsC=g.data;
 var IC={randstad:"M3 20V10h4v10M9 20V4h5v16M16 20v-8h5v8M2 20h20",zuid:"M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1","noord-oost":"M3 9c3-3 5 3 9 0s6 3 9 0M3 15c3-3 5 3 9 0s6 3 9 0",nightlife:"M9 18V6l11-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM20 16a3 3 0 11-6 0 3 3 0 016 0z",creators:"M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 100-8 4 4 0 000 8z",gold:"M3 18L2 7l6 5 4-7 4 7 6-5-1 11zM3 21h18",latenight:"M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z",vip:"M6 3h12l4 6-10 12L2 9zM2 9h20M9 3l3 6 3-6M12 21L9 9M12 21l3-12"};
 var LOCK="M6 11V8a6 6 0 0112 0v3M5 11h14v10H5z";
 function icon(slug,lock){return '<span class="ico"><svg viewBox="0 0 24 24"><path d="'+(lock?LOCK:(IC[slug]||"M12 3a9 9 0 100 18 9 9 0 000-18z"))+'"/></svg></span>'}
-var SECT=[["Regio\u2019s",["randstad","zuid","noord-oost"]],["Thema",["nightlife","creators"]],["Exclusief",["gold","goldclub","latenight","vip"]]];
+var SECT=[["Live",["avond"]],["Regio\u2019s",["randstad","zuid","noord-oost"]],["Thema",["nightlife","creators"]],["Exclusief",["gold","goldclub","latenight","vip"]]];
 var used={},h="";
-var TONE={randstad:"#b07a70",zuid:"#c9a96e","noord-oost":"#8fa3a8",nightlife:"#8a5f86",creators:"#b98d6c",gold:"#b8a98c",goldclub:"#d6b565",latenight:"#5a5f8f",vip:"#e8d4a8"};
+var TONE={avond:"#c9a96e",randstad:"#b07a70",zuid:"#c9a96e","noord-oost":"#8fa3a8",nightlife:"#8a5f86",creators:"#b98d6c",gold:"#b8a98c",goldclub:"#d6b565",latenight:"#5a5f8f",vip:"#e8d4a8"};
 function card(r,i){var ok=can(r,p);used[r.slug]=1;
-return '<button class="room'+(r.access==="vip"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'" style="--t:'+(TONE[r.slug]||"#c9a96e")+'"><span class="tx"><b>'+esc(r.name)+'<i class="nbd" id="b-'+r.slug+'" hidden></i></b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">'+dot(0)+'0 online</span></button>'}
+return '<button class="room'+(r.access==="vip"||r.slug==="avond"?' vip':'')+(ok?'':' lock')+'" data-i="'+i+'" style="--t:'+(TONE[r.slug]||"#c9a96e")+'"><span class="tx"><b>'+esc(r.name)+'<i class="nbd" id="b-'+r.slug+'" hidden></i></b><span class="small">'+esc(ok?r.description:need(r,p))+'</span></span><span class="cnt" id="c-'+r.slug+'">'+dot(0)+'0 online</span></button>'}
 SECT.forEach(function(sc){var rows=[];g.data.forEach(function(r,i){if(sc[1].indexOf(r.slug)>-1)rows.push(card(r,i))});if(rows.length)h+='<div class="sec">'+sc[0]+'</div>'+rows.join("")});
 var rest=[];g.data.forEach(function(r,i){if(!used[r.slug])rest.push(card(r,i))});if(rest.length)h+='<div class="sec">Meer</div>'+rest.join("");
 $("#rl").className="";$("#rl").innerHTML=h;
@@ -516,7 +518,7 @@ async function room(r,p){
 leave();
 var ok=can(r,p);
 app.innerHTML='<div class="brand" style="margin:10px 0 0;font-size:20px"><span class="logo"></span>Auré</div><div class="hd"><button class="back" id="bk" aria-label="Terug naar chatrooms" style="font-size:20px;padding:6px 12px 6px 0">←</button><div class="t"><i>'+esc(r.name)+'</i><span class="small" id="pc"></span></div><span class="sp"></span></div>'
-+(ok?'<div class="card" style="padding:0;position:relative"><div id="msgs"></div><button class="nb" id="nb" hidden>↓ Nieuwe berichten</button></div><div style="position:relative"><div class="sug" id="sug" hidden></div><div class="pill"><input type="text" id="tx" maxlength="500" placeholder="Schrijf een bericht…" autocomplete="off"><button id="sd" aria-label="Versturen">↑</button></div></div><div id="msg"></div>'
++(ok?(r.slug==="avond"?'<div class="small c" style="margin:-6px 0 10px">Wat hier gebeurt, blijft hier. Berichten verdwijnen morgenochtend.</div>':'')+'<div class="card" style="padding:0;position:relative"><div id="msgs"></div><button class="nb" id="nb" hidden>↓ Nieuwe berichten</button></div><div style="position:relative"><div class="sug" id="sug" hidden></div><div class="pill"><input type="text" id="tx" maxlength="500" placeholder="Schrijf een bericht…" autocomplete="off"><button id="sd" aria-label="Versturen">↑</button></div></div><div id="msg"></div>'
 :'<div class="card c"><div style="font-size:30px">🔒</div><p><b>'+esc(r.name)+'</b></p><p class="small">'+esc(need(r,p))+'</p></div>');
 $("#bk").onclick=function(){home(p)};
 if(!ok)return;
@@ -568,7 +570,7 @@ if(i.error&&i.error.code!=="23505"){o.innerHTML='<div class="sheet c"><b>Blokker
 box.querySelectorAll('[data-uid="'+m.user_id+'"]').forEach(function(e){e.remove()});
 o.innerHTML='<div class="sheet c"><b>@'+esc(pr.username||"?")+' is geblokkeerd.</b><p class="small">Je ziet geen berichten meer van dit lid. Je kunt dit terugdraaien via Instellingen.</p></div>';setTimeout(close,1900)}
 main();document.body.appendChild(o)}
-var g=await sb.from("messages").select(SEL).eq("room",r.slug).order("created_at",{ascending:false}).limit(50);
+var mq=sb.from("messages").select(SEL).eq("room",r.slug);if(r.slug==="avond")mq=mq.gte("created_at",new Date(Date.now()-3*3600e3).toISOString());var g=await mq.order("created_at",{ascending:false}).limit(50);
 if(g.data){g.data.reverse().forEach(add)}
 if(!box.children.length)box.innerHTML='<div class="small c" style="margin:auto">Nog geen berichten. Zeg als eerste hallo!</div>';
 chan=sb.channel("room-"+r.slug).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"room=eq."+r.slug},async function(e){
