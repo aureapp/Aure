@@ -154,6 +154,12 @@ input[type=text],input[type=email],input[type=password]{width:100%;padding:13px;
 .ins{display:flex;gap:12px;align-items:center;margin:8px 0 4px;padding:12px 12px 12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--card);font-size:13px;line-height:1.4}
 .ins img{width:40px;height:40px;border-radius:10px;flex:none}
 .ins .x{margin-left:auto;flex:none;width:36px;height:36px;border:0;background:none;color:var(--mut);font-size:18px;cursor:pointer}
+.wd{display:flex;justify-content:center;gap:8px;margin:18px 0 4px}
+.wd i{width:7px;height:7px;border-radius:50%;background:var(--line)}.wd i.on{background:var(--gold);width:22px;border-radius:99px}
+.wsi{width:54px;height:54px;border-radius:50%;margin:0 auto 14px;border:1px solid var(--gold);display:grid;place-items:center;color:var(--gold);background:rgba(201,169,110,.09)}
+.wsi svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.wst{font:italic 400 26px/1.2 Georgia,"Times New Roman",serif;margin:0 0 10px}
+.wsb{font-size:15px;line-height:1.6;color:var(--mut);margin:0 auto;max-width:320px}
 .wlh{font:italic 400 24px/1.25 Georgia,"Times New Roman",serif}
 .wlt{font-size:14px;line-height:1.55;color:var(--mut);margin:8px auto 0;max-width:300px}
 .wln{font:400 56px/1.05 Georgia,"Times New Roman",serif;color:var(--acc);margin:10px 0}
@@ -523,7 +529,7 @@ function installHint(){var el=document.getElementById("ins");if(!el||isApp())ret
 try{if(localStorage.getItem("aure_ins"))return}catch(e){}
 var ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 if(!ios&&!instEv)return;
-el.innerHTML='<div class="ins"><img src="apple-touch-icon.png" alt=""><div><b>Zet Auré op je beginscherm</b><div class="small">'+(ios?'Tik op het deel-icoon <b>⬆︎</b> en kies <b>Zet op beginscherm</b>.':'Dan opent Auré als een echte app.')+'</div>'+(ios?'':'<button class="back" id="insg" style="padding:6px 0 0">Installeren</button>')+'</div><button class="x" id="insx" aria-label="Sluiten">×</button></div>';
+el.innerHTML='<div class="ins"><img src="apple-touch-icon.png" alt=""><div><b>Zet Auré op je beginscherm</b><div class="small">'+(ios?'Tik in Safari op <b>Deel</b> (op de iPhone eerst op <b>•••</b> rechtsonder) en kies <b>Zet op beginscherm</b>.':'Dan opent Auré als een echte app.')+'</div>'+(ios?'':'<button class="back" id="insg" style="padding:6px 0 0">Installeren</button>')+'</div><button class="x" id="insx" aria-label="Sluiten">×</button></div>';
 $("#insx").onclick=function(){try{localStorage.setItem("aure_ins","1")}catch(e){}el.innerHTML=""};
 if(!ios)$("#insg").onclick=async function(){instEv.prompt();try{await instEv.userChoice}catch(e){}instEv=null;el.innerHTML=""}}
 function amsNow(){var f=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date()).split(":");return {d:amsDay(),m:+f[0]*60+ +f[1]}}
@@ -691,12 +697,31 @@ var url=location.origin+location.pathname+"#wachtlijst";
 if(navigator.share){try{await navigator.share({title:"Auré",text:"Zet je ook op de wachtlijst van Auré",url:url})}catch(e){}return}
 try{await navigator.clipboard.writeText(url);this.textContent="Link gekopieerd ✓"}catch(e){say(url,true)}}}}
 
+function enter(p){var k="aure_welkom_"+p.id,seen=false;try{seen=!!localStorage.getItem(k)}catch(e){}if(seen)home(p);else welcome(p)}
+async function welcome(p){
+var av=null;try{var a=await sb.from("rooms").select("opens,closes,days").eq("slug","avond").maybeSingle();av=a.data}catch(e){}
+var when=av&&av.opens?((av.days&&av.days.length?"Elke "+av.days.map(function(d){return DAYN[d]}).join(" en ")+" ":"Elke avond ")+"om "+hh(av.opens)):"Op een vaste avond";
+var S=[
+{i:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>',t:"Welkom bij Auré, @"+p.username,b:"Auré is een community voor 18+. Geen eindeloze feed, maar echte gesprekken met mensen uit heel Nederland."},
+{i:'<path d="M4 5h16v11H9l-5 4z"/>',t:"Kies een kamer",b:"Elke kamer heeft een eigen sfeer: je regio, een thema of een exclusieve lounge. Noem iemand met @naam. Zie je iets wat niet kan? Tik op ⋯ naast een bericht om te melden of te blokkeren."},
+{i:'<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>',t:"De Avond",b:when+" komt iedereen samen in één kamer, met een host en een thema. Eén uur, iedereen tegelijk. Wat daar gebeurt, blijft daar."}];
+var n=0;
+function draw(){var x=S[n],last=n===S.length-1;
+app.innerHTML='<div class="hero" style="padding-bottom:8px"><div class="orb"></div><div class="wm" style="font-size:34px">Auré</div><div class="gl"></div><div class="tg">The community</div></div>'
++'<div class="card glass c" style="padding:28px 20px 20px"><div class="wsi"><svg viewBox="0 0 24 24">'+x.i+'</svg></div><h2 class="wst">'+esc(x.t)+'</h2><p class="wsb">'+esc(x.b)+'</p>'
++'<div class="wd">'+S.map(function(_,j){return '<i class="'+(j===n?'on':'')+'"></i>'}).join("")+'</div>'
++'<button class="btn" id="wn">'+(last?'Naar de kamers':'Volgende')+'</button>'+(last?'':'<button class="back" id="ws" style="width:100%;margin-top:8px">Overslaan</button>')+'</div>';
+$("#wn").onclick=function(){if(last)done();else{n++;draw()}};
+if(!last)$("#ws").onclick=done}
+function done(){try{localStorage.setItem("aure_welkom_"+p.id,"1")}catch(e){}home(p)}
+draw()}
+
 async function gate(p,user){
 myYear=null;
 var q=await sb.from("private_profiles").select("birth_year").eq("id",user.id).maybeSingle();
-if(q.data){myYear=q.data.birth_year;home(p);return}
+if(q.data){myYear=q.data.birth_year;enter(p);return}
 var by=(user.user_metadata||{}).birth_year;
-if(by){var i=await sb.from("private_profiles").insert({id:user.id,birth_year:by});if(!i.error){myYear=by;home(p);return}}
+if(by){var i=await sb.from("private_profiles").insert({id:user.id,birth_year:by});if(!i.error){myYear=by;enter(p);return}}
 askYear(p,user)}
 function askYear(p,user){
 app.innerHTML=head()+'<div class="card"><b>Nog één ding</b><p class="small">Vul je geboortejaar in. Het wordt nergens getoond en bepaalt welke kamers voor jou open zijn. Je kunt het later niet meer wijzigen.</p><label>Geboortejaar</label><input type="text" id="by" inputmode="numeric" maxlength="4" placeholder="bijv. 1995"><button class="btn" id="go">Opslaan</button><div id="msg"></div></div>';
@@ -704,7 +729,7 @@ $("#go").onclick=async function(){var by=$("#by").value.trim();
 if(!/^(19|20)\d\d$/.test(by)||+by>new Date().getFullYear()-18){say("Alleen voor 18+. Vul een geldig geboortejaar in.");return}
 var i=await sb.from("private_profiles").insert({id:user.id,birth_year:+by});
 if(i.error){say("Opslaan lukt niet.");return}
-myYear=+by;home(p)}}
+myYear=+by;enter(p)}}
 
 async function start(){
 var c=cfg();
